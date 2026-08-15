@@ -1,0 +1,188 @@
+# Chatbot — Docker Compose
+# Servicios: app (FastAPI), worker (Celery), beat (Celery Beat), db (Postgres+pgvector), redis, frontend, mcp
+# Solo `app` ejecuta migraciones + seed. worker y beat esperan a app healthy.
+
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chatbot-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    env_file: .env
+    environment:
+      RUN_MIGRATIONS: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - audios_data:/data/audios
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # El primer arranque aplica todas las migraciones y siembra datos: puede
+      # pasar del minuto. Con menos margen, worker y beat se dan por fallidos.
+      start_period: 180s
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chatbot-worker
+    restart: unless-stopped
+    command: ["celery", "-A", "app.tasks", "worker", "--loglevel=info", "--concurrency=4"]
+    env_file: .env
+    environment:
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      app:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - audios_data:/data/audios
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chatbot-beat
+    restart: unless-stopped
+    # --schedule: ruta fija y conocida del fichero de estado de beat, para que
+    # el healthcheck de abajo pueda mirar si se sigue actualizando. Mismo
+    # criterio que en docker-compose.easypanel.yml (ahí está el porqué largo).
+    command: ["celery", "-A", "app.tasks", "beat", "--loglevel=info", "--schedule=/tmp/celerybeat-schedule"]
+    env_file: .env
+    environment:
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      app:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Si beat muere, dejan de dispararse copias, purgas y el latido del worker
+    # sin que nada se ponga en rojo. Beat reescribe su fichero de estado cada
+    # pocos minutos: más de 20 sin tocarlo = no está trabajando.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import os,sys,time; p='/tmp/celerybeat-schedule';
+          sys.exit(0 if os.path.exists(p) and time.time()-os.path.getmtime(p) < 1200 else 1)"
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 180s
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: chatbot-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-chatbot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-chatbot}
+    # Mismo truco que en docker-compose.easypanel.yml: Postgres solo hace caso a
+    # POSTGRES_PASSWORD la primera vez que se crea el volumen. Si la cambias
+    # después, la base de datos se queda con la vieja y verás "P1000
+    # Authentication failed" en bucle. En cada arranque forzamos que la
+    # contraseña sea la de la variable. Es idempotente y no toca los datos.
+    entrypoint:
+      - bash
+      - -c
+      - |
+        rm -f /tmp/db-password-synced
+        (
+          until pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -h /var/run/postgresql >/dev/null 2>&1; do
+            sleep 1
+          done
+          # Por stdin, no con -c: psql solo sustituye :'pwd' cuando lee el SQL de
+          # la entrada estándar o de un fichero.
+          for _ in $$(seq 1 30); do
+            if printf '%s\n' "ALTER USER \"$$POSTGRES_USER\" WITH PASSWORD :'pwd';" \
+                 | psql -q -v ON_ERROR_STOP=1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" \
+                        -h /var/run/postgresql -v pwd="$$POSTGRES_PASSWORD" \
+                        >/dev/null 2>/tmp/db-password-sync.err; then
+              echo "[db] Contraseña de $$POSTGRES_USER sincronizada con POSTGRES_PASSWORD."
+              touch /tmp/db-password-synced
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "[db] ERROR: no se ha podido sincronizar la contraseña de $$POSTGRES_USER." >&2
+          cat /tmp/db-password-sync.err >&2
+        ) &
+        exec docker-entrypoint.sh postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    # "Sana" = acepta conexiones Y la contraseña ya está sincronizada.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" && test -f /tmp/db-password-synced"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: chatbot-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Build ARG, no environment: es un build estático de Vite — la URL se
+        # hornea en compilación; un env var en runtime no tiene ningún efecto.
+        VITE_API_BASE_URL: ${APP_BASE_URL:-http://localhost:8000}
+    container_name: chatbot-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    environment:
+      # La pestaña Conexiones → API / MCP enseña esta URL para conectar agentes.
+      MCP_BASE_URL: ${MCP_BASE_URL:-http://localhost:8080}
+    depends_on:
+      - app
+
+  # Servidor MCP: expone la agent-api (/api/v1/agent-api) como herramientas MCP
+  # para que Claude, n8n o tu agente operen el chatbot en remoto. Es un cliente
+  # HTTP fino, sin lógica ni estado.
+  #
+  # SIN env_file a propósito: no necesita —ni debe tener— las claves de la app.
+  # Lo único que ve es la URL del backend; los permisos los aplica el backend a
+  # partir del token de agente que manda cada cliente MCP.
+  mcp:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: chatbot-mcp
+    restart: unless-stopped
+    ports:
+      - "${MCP_PORT:-8080}:8080"
+    environment:
+      AGENT_API_BASE_URL: http://app:8000
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  redis_data:
+  audios_data:

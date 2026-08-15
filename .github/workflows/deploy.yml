@@ -1,0 +1,44 @@
+# Despliegue en EasyPanel SOLO si la CI ha terminado en verde.
+#
+# El problema que resuelve: con el auto-despliegue de EasyPanel encendido, el
+# push a `main` dispara a la vez la CI y el despliegue. Cuando la CI se pone
+# roja, el contenedor roto ya está subiendo. Este workflow espera a que la CI
+# termine y solo entonces avisa a EasyPanel.
+#
+# ⚠️ NO HACE NADA HASTA QUE SE CONFIGUREN DOS COSAS A MANO (5 minutos):
+#   1. En EasyPanel: apagar el auto-despliegue y copiar la URL de despliegue
+#      por webhook del servicio.
+#   2. En GitHub: guardar esa URL como secreto `EASYPANEL_DEPLOY_WEBHOOK`.
+# Mientras no exista el secreto, este workflow no falla: avisa y se queda
+# quieto (así no ensucia el historial con rojos que no son fallos de código).
+#
+# Paso a paso, en castellano y para alguien no técnico: DEPLOY_EASYPANEL.md § 7.
+name: Desplegar en EasyPanel
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  desplegar:
+    # Solo si la CI terminó BIEN. Si terminó mal, aquí no pasa nada y el
+    # servidor se queda con la versión anterior, que es lo que queremos.
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Avisar a EasyPanel de que puede desplegar
+        env:
+          WEBHOOK: ${{ secrets.EASYPANEL_DEPLOY_WEBHOOK }}
+        run: |
+          if [ -z "${WEBHOOK}" ]; then
+            echo "::notice::No hay secreto EASYPANEL_DEPLOY_WEBHOOK configurado."
+            echo "No se dispara ningún despliegue desde aquí."
+            echo "Si EasyPanel sigue con el auto-despliegue encendido, ya habrá"
+            echo "desplegado por su cuenta (sin esperar a la CI)."
+            echo "Cómo configurarlo: DEPLOY_EASYPANEL.md § 7."
+            exit 0
+          fi
+          echo "Avisando a EasyPanel (commit ${{ github.event.workflow_run.head_sha }})…"
+          curl -fsS -X POST "${WEBHOOK}" -w '\nRespuesta HTTP: %{http_code}\n'

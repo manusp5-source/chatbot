@@ -1,0 +1,23 @@
+# Nunca dentro de la imagen: secretos y artefactos locales.
+.env
+.env.*
+*.pem
+*.key
+
+# Artefactos de desarrollo/test (COPY . . los arrastraría).
+tests/
+.pytest_cache/
+__pycache__/
+**/__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Varios
+.git/
+.gitignore
+README.md
+celerybeat-schedule
+dump.rdb

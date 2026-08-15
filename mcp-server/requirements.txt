@@ -1,0 +1,14 @@
+# Agent-API MCP Server - dependencias fijadas (pinned).
+# Solo se declaran las directas; las transitivas relevantes se listan como
+# referencia de las versiones verificadas en este entorno.
+
+# Directas
+mcp==1.28.1
+httpx==0.28.1
+
+# Transitivas verificadas (fijadas para builds reproducibles)
+anyio==4.14.1
+pydantic==2.13.4
+sse-starlette==3.4.5
+starlette==1.3.1
+uvicorn==0.50.0

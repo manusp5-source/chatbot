@@ -1,0 +1,60 @@
+# Environment and secrets
+.env
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+vendor/
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Docker
+docker-compose.override.yml
+
+# OS
+Thumbs.db
+
+# Chatbot — runtime data
+data/
+storage/
+audios/
+*.sqlite
+*.db
+
+# Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+dump.rdb

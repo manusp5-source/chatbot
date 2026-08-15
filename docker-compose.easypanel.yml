@@ -1,0 +1,368 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Chatbot — docker-compose para EasyPanel.
+#
+# Este es el fichero que se despliega en producción. Crea los 7 servicios de una:
+#   db · redis · app (API) · worker · beat · frontend (el panel) · mcp
+#
+# Endurecido respecto al docker-compose.yml de desarrollo:
+#   - Los secretos obligatorios llevan `${VAR:?...}`: si falta uno, el
+#     despliegue PARA y dice cuál. Nada de defaults silenciosos.
+#   - El servicio db sincroniza su contraseña en cada arranque (ver más abajo).
+#   - Los healthchecks tienen margen de arranque (`start_period`) para que el
+#     primer despliegue, que aplica migraciones, no se dé por fallido.
+#
+# MODO DEGRADADO: NO hacen falta claves de IA/WhatsApp/Instagram para arrancar.
+# El backend levanta solo con las variables de abajo; las claves de proveedor se
+# configuran luego desde el panel (Conexiones), cifradas en la base de datos.
+#
+# Guía paso a paso: DEPLOY_EASYPANEL.md
+# Variables: .env.example (cópialo, rellénalo y pégalo en Environment). Las
+# opcionales, una a una, en el anexo de DEPLOY_EASYPANEL.md
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      # El usuario y el nombre de la base de datos son configurables a propósito.
+      # Si no pones nada, se llaman "chatbot" (que es lo que dice la guía). Solo
+      # hay que definirlos si tu instalación ya existía con otros nombres: el
+      # volumen conserva los de la primera vez y cambiarlos aquí NO migra nada.
+      POSTGRES_USER: ${POSTGRES_USER:-chatbot}
+      POSTGRES_DB: ${POSTGRES_DB:-chatbot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD es obligatorio}
+    # Postgres solo hace caso a POSTGRES_PASSWORD la primera vez que se crea el
+    # volumen; después la ignora. Si cambias POSTGRES_PASSWORD más adelante, la
+    # base de datos se queda con la vieja y el backend no puede entrar
+    # ("P1000 Authentication failed"), en bucle y sin forma obvia de salir.
+    # Para que eso no pase nunca: en cada arranque, ya con el servidor levantado,
+    # forzamos que la contraseña del usuario sea la de POSTGRES_PASSWORD. Manda
+    # siempre la variable, no el volumen. Es idempotente y no toca los datos.
+    # (El ALTER USER va por el socket local, que la imagen oficial acepta sin
+    # contraseña; de puertas afuera sigue haciendo falta la contraseña.)
+    entrypoint:
+      - bash
+      - -c
+      - |
+        rm -f /tmp/db-password-synced
+        (
+          until pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -h /var/run/postgresql >/dev/null 2>&1; do
+            sleep 1
+          done
+          # La orden va por la ENTRADA ESTÁNDAR, no con -c: psql solo sustituye
+          # las variables (:'pwd') cuando lee el SQL de stdin o de un fichero.
+          # Con -c lo manda tal cual y Postgres responde "syntax error at or
+          # near \":\"", que es justo lo que hacía que esto no sirviera de nada.
+          for _ in $$(seq 1 30); do
+            if printf '%s\n' "ALTER USER \"$$POSTGRES_USER\" WITH PASSWORD :'pwd';" \
+                 | psql -q -v ON_ERROR_STOP=1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" \
+                        -h /var/run/postgresql -v pwd="$$POSTGRES_PASSWORD" \
+                        >/dev/null 2>/tmp/db-password-sync.err; then
+              echo "[db] Contraseña de $$POSTGRES_USER sincronizada con POSTGRES_PASSWORD."
+              # El marcador SOLO se pone si la sincronización salió bien: es lo
+              # que mira el healthcheck. Si mintiera, el despliegue saldría verde
+              # con la contraseña desincronizada y el backend entraría en bucle
+              # de "P1000 Authentication failed" sin decir por qué.
+              touch /tmp/db-password-synced
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "[db] ERROR: no se ha podido sincronizar la contraseña de $$POSTGRES_USER." >&2
+          echo "[db] Último error de psql:" >&2
+          cat /tmp/db-password-sync.err >&2
+          echo "[db] La base de datos NO se dará por sana. Revisa POSTGRES_USER y POSTGRES_DB:" >&2
+          echo "[db] si esta instalación ya existía con otros nombres, el volumen conserva los de la primera vez." >&2
+        ) &
+        exec docker-entrypoint.sh postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    # "Sana" = acepta conexiones Y la contraseña ya está sincronizada. Así el
+    # backend (que espera a este healthcheck) nunca arranca a medias.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" && test -f /tmp/db-password-synced"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      # Margen para que Postgres cree el volumen la primera vez y sincronice.
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    # ⚠️ UNA SOLA INSTANCIA de app, worker y beat. No subas las réplicas: el
+    # buffer de mensajes y las tareas periódicas se duplicarían (y con ellas los
+    # envíos a tus clientes).
+    environment:
+      APP_ENV: production
+      APP_PORT: "8000"
+      APP_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL es obligatorio}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?FRONTEND_BASE_URL es obligatorio}
+      # Dominios que pueden llamar a la API desde un navegador. Por defecto, el
+      # del panel y solo ese. Si además sirves el widget de chat desde la web
+      # del cliente, añade ese dominio aquí separado por comas (con https y
+      # SIN barra final, o el navegador dará error de CORS).
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-${FRONTEND_BASE_URL}}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-chatbot}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD es obligatorio}@db:5432/${POSTGRES_DB:-chatbot}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET es obligatorio}
+      JWT_EXPIRATION_HOURS: "24"
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY es obligatorio}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:?INITIAL_ADMIN_EMAIL es obligatorio}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD es obligatorio}
+      AUDIO_STORAGE_PATH: /data/audios
+      DEFAULT_LLM_MODEL: ${DEFAULT_LLM_MODEL:-gpt-5.4-mini}
+      MESSAGE_BUFFER_SECONDS: ${MESSAGE_BUFFER_SECONDS:-8}
+      RESPONSE_SPLIT_MAX_PARTS: ${RESPONSE_SPLIT_MAX_PARTS:-3}
+      # ── Opcionales: si no las pones, se quedan con estos valores ──────────
+      # Están aquí para que se puedan cambiar desde el .env / la pestaña
+      # Environment sin tocar el compose. Los valores por defecto son los
+      # mismos que trae backend/app/core/config.py; si algún día cambia allí,
+      # cámbialo también aquí. Explicación de cada una: anexo de DEPLOY_EASYPANEL.md
+      APP_NAME: ${APP_NAME:-Chatbot}
+      # Nº de proxies por delante del backend. MAL PUESTO ROMPE EL LÍMITE DE
+      # INTENTOS DE LOGIN: pasa a contarse global para todo el mundo junto y
+      # cinco peticiones dejan a TODOS sin poder entrar. Cómo saber el número
+      # de verdad: DEPLOY_EASYPANEL.md § 10.
+      TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-1}
+      DASHBOARD_TIMEZONE: ${DASHBOARD_TIMEZONE:-Europe/Madrid}
+      UPLOADS_PATH: ${UPLOADS_PATH:-/data/audios/uploads}
+      BACKUP_DIR: ${BACKUP_DIR:-/data/audios/backups}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      BACKUP_RETENTION_MAX_FILES: ${BACKUP_RETENTION_MAX_FILES:-14}
+      BACKUP_MIN_FREE_GB: ${BACKUP_MIN_FREE_GB:-2.0}
+      EMAIL_RETENTION_MONTHS: ${EMAIL_RETENTION_MONTHS:-6}
+      AUDIO_RETENTION_DAYS: ${AUDIO_RETENTION_DAYS:-270}
+      MEDIA_RETENTION_DAYS: ${MEDIA_RETENTION_DAYS:-180}
+      MIN_TEXT_BUFFER_SECONDS: ${MIN_TEXT_BUFFER_SECONDS:-6}
+      AGENT_AUTORESPONSE_DEFAULT: ${AGENT_AUTORESPONSE_DEFAULT:-true}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      INSTAGRAM_OAUTH_CLIENT_ID: ${INSTAGRAM_OAUTH_CLIENT_ID:-}
+      INSTAGRAM_OAUTH_CLIENT_SECRET: ${INSTAGRAM_OAUTH_CLIENT_SECRET:-}
+      IG_WEBHOOK_DEBUG: ${IG_WEBHOOK_DEBUG:-false}
+      # Solo este servicio prepara la base de datos. worker y beat NO.
+      RUN_MIGRATIONS: "true"
+    restart: unless-stopped
+    volumes:
+      - audios_data:/data/audios
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # El primer arranque aplica TODAS las migraciones y siembra los datos
+      # base: en un servidor modesto eso puede pasar del minuto. Con un margen
+      # corto, el despliegue se daba por fallido cuando solo iba lento.
+      start_period: 180s
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.tasks worker --loglevel=info --concurrency=4
+    environment:
+      APP_ENV: production
+      APP_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL es obligatorio}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?FRONTEND_BASE_URL es obligatorio}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-chatbot}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD es obligatorio}@db:5432/${POSTGRES_DB:-chatbot}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET es obligatorio}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY es obligatorio}
+      # validate_production() exige también las credenciales del admin inicial
+      # (aunque el worker no las use): sin ellas el servicio crashea al arrancar.
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:?INITIAL_ADMIN_EMAIL es obligatorio}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD es obligatorio}
+      AUDIO_STORAGE_PATH: /data/audios
+      DEFAULT_LLM_MODEL: ${DEFAULT_LLM_MODEL:-gpt-5.4-mini}
+      MESSAGE_BUFFER_SECONDS: ${MESSAGE_BUFFER_SECONDS:-8}
+      RESPONSE_SPLIT_MAX_PARTS: ${RESPONSE_SPLIT_MAX_PARTS:-3}
+      # Mismas opcionales que en `app`. El worker las necesita porque las
+      # copias de seguridad y las purgas de retención se ejecutan AQUÍ: si
+      # cambias BACKUP_DIR o una retención solo en `app`, no pasa nada.
+      APP_NAME: ${APP_NAME:-Chatbot}
+      DASHBOARD_TIMEZONE: ${DASHBOARD_TIMEZONE:-Europe/Madrid}
+      UPLOADS_PATH: ${UPLOADS_PATH:-/data/audios/uploads}
+      BACKUP_DIR: ${BACKUP_DIR:-/data/audios/backups}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      BACKUP_RETENTION_MAX_FILES: ${BACKUP_RETENTION_MAX_FILES:-14}
+      BACKUP_MIN_FREE_GB: ${BACKUP_MIN_FREE_GB:-2.0}
+      EMAIL_RETENTION_MONTHS: ${EMAIL_RETENTION_MONTHS:-6}
+      AUDIO_RETENTION_DAYS: ${AUDIO_RETENTION_DAYS:-270}
+      MEDIA_RETENTION_DAYS: ${MEDIA_RETENTION_DAYS:-180}
+      MIN_TEXT_BUFFER_SECONDS: ${MIN_TEXT_BUFFER_SECONDS:-6}
+      AGENT_AUTORESPONSE_DEFAULT: ${AGENT_AUTORESPONSE_DEFAULT:-true}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      INSTAGRAM_OAUTH_CLIENT_ID: ${INSTAGRAM_OAUTH_CLIENT_ID:-}
+      INSTAGRAM_OAUTH_CLIENT_SECRET: ${INSTAGRAM_OAUTH_CLIENT_SECRET:-}
+      RUN_MIGRATIONS: "false"
+    restart: unless-stopped
+    volumes:
+      - audios_data:/data/audios
+    # Espera a que app esté SANO, no solo arrancado: así el worker nunca se
+    # encuentra la base de datos a medio migrar.
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    # El worker NO tenía healthcheck: si moría o dejaba de consumir la cola,
+    # seguía figurando como "arrancado" y nadie se enteraba (llegó a estar 20
+    # horas sin ejecutar ni una tarea). `inspect ping` le pregunta al propio
+    # worker por el broker; si no contesta, el contenedor se marca enfermo y
+    # con restart: unless-stopped se reinicia solo.
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.tasks inspect ping -t 10 | grep -q pong"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 180s
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    # --schedule fija DÓNDE deja beat su fichero de estado. Antes iba al
+    # directorio de trabajo con un nombre que depende de la librería dbm del
+    # sistema; en una ruta fija y conocida, el healthcheck de abajo puede
+    # mirarlo. El fichero es desechable: si se pierde, beat lo rehace.
+    command: celery -A app.tasks beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+    environment:
+      APP_ENV: production
+      # validate_production() exige URLs reales y credenciales del admin inicial
+      # en TODOS los procesos que importan la config: sin estas variables el
+      # beat crashea en bucle al arrancar.
+      APP_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL es obligatorio}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?FRONTEND_BASE_URL es obligatorio}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:?INITIAL_ADMIN_EMAIL es obligatorio}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD es obligatorio}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-chatbot}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD es obligatorio}@db:5432/${POSTGRES_DB:-chatbot}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET es obligatorio}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY es obligatorio}
+      RUN_MIGRATIONS: "false"
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    # El beat NO tenía comprobación de salud: si moría, dejaban de dispararse
+    # las copias de seguridad, las purgas de retención y el propio latido del
+    # worker, EN SILENCIO. Y el síntoma despista, porque lo que se ve en el
+    # panel es "el worker no late" — cuando el worker está perfectamente y
+    # quien ha muerto es el que le manda el trabajo.
+    #
+    # Cómo se comprueba: beat reescribe su fichero de estado cada pocos minutos
+    # (sincroniza cada 3 min y despierta como mucho cada 5). Si ese fichero
+    # lleva más de 20 minutos sin tocarse, beat no está haciendo su trabajo.
+    # La ventana es holgada a propósito: marcar "enfermo" de más provocaría
+    # reinicios en cadena, que es peor que el problema.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import os,sys,time; p='/tmp/celerybeat-schedule';
+          sys.exit(0 if os.path.exists(p) and time.time()-os.path.getmtime(p) < 1200 else 1)"
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      # Margen de arranque: el fichero no existe hasta que beat termina de
+      # cargar el calendario.
+      start_period: 180s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Build ARG, no variable de runtime: es un build estático de Vite, la
+        # URL se hornea al compilar. Si cambias de dominio hay que RECONSTRUIR
+        # el panel; reiniciarlo no sirve de nada.
+        VITE_API_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL es obligatorio}
+    restart: unless-stopped
+    environment:
+      # Runtime (genera /config.js), no build: la pestaña Conexiones → API / MCP
+      # enseña esta URL para conectar agentes. Si se deja vacía, el panel deriva
+      # la del backend, que NO es donde vive el MCP.
+      MCP_BASE_URL: ${MCP_BASE_URL:-}
+      # También en runtime: el nombre visible de la instalación (login, menú
+      # lateral, pestaña del navegador). Sin esto, APP_NAME solo cambiaba el
+      # backend y el panel seguía diciendo "Chatbot".
+      APP_NAME: ${APP_NAME:-}
+    # El panel es HTML estático: llama a la API por su dominio público, no la
+    # proxya. Con que app esté creado basta; no necesita esperar a que esté sano.
+    depends_on:
+      app:
+        condition: service_started
+    # Sin esto el panel salía como "arrancado" y nunca como "sano", y la guía
+    # dice que está listo cuando los siete servicios están en verde: el séptimo
+    # no llegaba nunca. Pide su propio index.html por dentro (wget viene en la
+    # imagen de nginx, no se descarga nada).
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Servidor MCP: expone la agent-api (/api/v1/agent-api) como herramientas MCP
+  # para que Claude, n8n o tu agente operen la instalación en remoto. Es un cliente
+  # HTTP fino: sin base de datos, sin Redis, sin estado y sin volúmenes.
+  #
+  # SIN env_file ni secretos a propósito. Lo único que ve es la URL interna del
+  # backend; quién puede hacer qué lo decide el backend con el token de agente
+  # que manda cada cliente MCP (panel → Conexiones → API / MCP).
+  #
+  # Necesita su propio dominio en EasyPanel apuntando al puerto 8080, porque los
+  # agentes se conectan desde fuera. Ver DEPLOY_EASYPANEL.md §2.7.
+  mcp:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Nombre del servicio dentro de la red del proyecto: el tráfico no sale a
+      # internet para dar la vuelta por el dominio público.
+      AGENT_API_BASE_URL: http://app:8000
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  redis_data:
+  audios_data:

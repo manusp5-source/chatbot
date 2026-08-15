@@ -1,0 +1,23 @@
+[project]
+name = "chatbot-backend"
+version = "0.1.0"
+description = "Backend del chatbot de atención al cliente"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = "test_*.py"
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true

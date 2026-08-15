@@ -1,0 +1,169 @@
+# CI: ejecuta la suite completa del backend (incluidos los tests de integración
+# DB-gated, que sin este workflow no corrían en ningún sitio), el build del
+# frontend y la construcción de las dos imágenes Docker.
+#
+# ⚠️ ESTO NO ES UNA BARRERA POR SÍ SOLO. Se dispara con el push a `main`, y
+# EasyPanel despliega ESE MISMO push: cuando la CI se pone roja, el contenedor
+# roto ya va camino de producción. Para que sea una barrera de verdad hay que
+# configurar DOS cosas a mano (ninguna se puede hacer desde este fichero):
+#   1. GitHub → protección de la rama `main` con esta CI como comprobación
+#      obligatoria, para que solo entre código que ya ha pasado en verde.
+#   2. EasyPanel → apagar el auto-despliegue y disparar el despliegue por
+#      webhook solo cuando la CI termine bien.
+# Paso a paso, en castellano: DEPLOY_EASYPANEL.md § 7.
+#
+# HISTORIA: del 1 de julio al 11 de agosto de 2026 este workflow NUNCA pasó en
+# verde (55 ejecuciones, 55 fallos). El paso `alembic upgrade head` corre FUERA
+# de pytest, así que no recibía los valores por defecto de tests/conftest.py y
+# moría con "RuntimeError: ENCRYPTION_KEY no configurada" antes de ejecutar un
+# solo test. Por eso las variables de test se definen ahora en el bloque `env`
+# del job: las ven TODOS los pasos, no solo pytest.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  # Los PR también, para poder exigir la CI en verde ANTES de mezclar a main
+  # (que es lo único que evita desplegar algo roto).
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: chatbot
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chatbot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Mismos valores que asume tests/conftest.py. Se ponen aquí (y no solo
+      # allí) porque los pasos de alembic no pasan por pytest y se quedaban sin
+      # ellos. conftest.py usa setdefault, así que no hay conflicto: si la
+      # variable ya viene del entorno, la respeta.
+      APP_ENV: test
+      DATABASE_URL: postgresql+asyncpg://chatbot:test@localhost:5432/test
+      REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/1
+      CELERY_RESULT_BACKEND: redis://localhost:6379/2
+      # Secretos DE JUGUETE, solo para la CI. No valen para nada fuera de aquí:
+      # la base de datos se crea vacía y se tira al terminar el job.
+      JWT_SECRET: ci-only-secret-no-usar-en-produccion-0123456789
+      # Clave Fernet válida (la migración 0002 cifra columnas y la necesita).
+      ENCRYPTION_KEY: PqArc6c-wI8DK-bGwCPBlo4e_gg-Ym5mSnjh05FXQd4=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # Informativo A PROPÓSITO: el repo arrastra más de 600 avisos de ruff.
+      # Ponerlo bloqueante dejaría la CI en rojo desde el primer día y volvería
+      # a hacerla inútil. Sale en el log para ir bajando el número; cuando esté
+      # a cero, quita el `continue-on-error` y pasa a bloquear.
+      - name: Lint (ruff) — INFORMATIVO, no bloquea
+        continue-on-error: true
+        run: |
+          ruff check . || true
+          echo "— Avisos de ruff (informativo) —"
+          ruff check --statistics . || true
+
+      - name: Migraciones — subir (schema para los tests DB-gated)
+        run: alembic upgrade head
+
+      # Una migración con la marcha atrás rota solo se descubre cuando hay que
+      # dar marcha atrás en producción, que es el peor momento posible. Aquí se
+      # baja hasta el principio y se vuelve a subir: si algún downgrade está
+      # mal, la CI lo dice hoy y no el día del incidente.
+      - name: Migraciones — comprobar la marcha atrás (downgrade + upgrade)
+        run: |
+          alembic downgrade base
+          alembic upgrade head
+
+      - name: Run tests
+        run: pytest -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Build
+        run: npm run build
+
+  # Un Dockerfile roto no se detectaba hasta que EasyPanel intentaba construir
+  # la imagen, es decir, EN PRODUCCIÓN. Aquí se construyen las tres imágenes
+  # igual que las construye EasyPanel (mismo contexto, mismo Dockerfile).
+  # No se sube ninguna imagen a ningún sitio: solo se comprueba que construyen.
+  imagenes:
+    name: Construir imágenes Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Imagen del backend (app / worker / beat)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Imagen del panel (frontend)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          # El Dockerfile del panel ABORTA si no recibe esta URL (a propósito).
+          # Aquí vale cualquiera: solo se comprueba que la imagen construye.
+          build-args: |
+            VITE_API_BASE_URL=https://ci.example.invalid
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Imagen del servidor MCP
+        uses: docker/build-push-action@v6
+        with:
+          context: ./mcp-server
+          file: ./mcp-server/Dockerfile
+          push: false
+          cache-from: type=gha,scope=mcp
+          cache-to: type=gha,mode=max,scope=mcp

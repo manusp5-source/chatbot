@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Título por defecto; main.tsx lo reemplaza al arrancar por el nombre
+         configurado de la instalación (APP_NAME/VITE_APP_NAME). -->
+    <title>Chatbot</title>
+
+    <!-- Tema ANTES del primer paint: mismo criterio que src/store/theme.ts
+         (localStorage "chatbot-theme" y, si no hay, preferencia del sistema).
+         Sin esto, quien usa modo oscuro veía un flash blanco mientras carga
+         el bundle, porque la clase .dark la ponía el JS de la app. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("chatbot-theme");
+          if (t !== "light" && t !== "dark") {
+            t = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          }
+          if (t === "dark") document.documentElement.classList.add("dark");
+        } catch (e) {
+          /* sin localStorage (modo privado): se queda el claro por defecto */
+        }
+      })();
+    </script>
+
+    <!-- Favicon: bocadillo de conversación en línea, sin fondo, adaptativo
+         claro/oscuro (positivo/negativo). El icono maskable para instalar como
+         app vive en /icon-192.svg y /icon-512.svg (esos sí llevan tile). -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#DBE09E" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Chatbot" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+
+    <!-- Google Fonts: Coro -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="h-full font-sans antialiased bg-paper text-ink">
+    <div id="root" class="h-full"></div>
+    <!-- Config de runtime (URL del backend). La genera el contenedor al arrancar
+         desde API_BASE_URL; debe cargarse ANTES del bundle de la app. -->
+    <script src="/config.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

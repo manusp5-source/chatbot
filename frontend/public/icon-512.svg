@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Icono propio del chatbot: el MISMO bocadillo del favicon (marca oscura),
+       sobre crema #F5F4EF como el resto de apps. El grupo va reducido
+       (~58%) para la zona segura "maskable": Android recorta en círculo y las
+       esquinas se perderían. -->
+  <rect width="512" height="512" fill="#F5F4EF"/>
+  <g transform="translate(256 256) scale(0.58) translate(-256 -256)">
+    <g fill="none" stroke="#1a1612" stroke-width="30" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="120" y="150" width="272" height="180" rx="52"/>
+      <path d="M196 330 L176 388 L250 330"/>
+    </g>
+    <g fill="#1a1612">
+      <circle cx="200" cy="240" r="20"/>
+      <circle cx="256" cy="240" r="20"/>
+      <circle cx="312" cy="240" r="20"/>
+    </g>
+  </g>
+</svg>

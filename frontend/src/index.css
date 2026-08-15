@@ -1,0 +1,305 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Coro — design tokens
+   Papeles, tintas, pistacho y sombras suaves.
+   ============================================================ */
+/* Canales RGB (espaciado-separado) por tema. Los tokens de Tailwind los
+   consumen como `rgb(var(--x-rgb) / <alpha-value>)`, de modo que los
+   modificadores de opacidad (p. ej. bg-ink/40) siguen funcionando y, a la
+   vez, el color cambia con la clase `.dark`. */
+:root {
+  /* Controles nativos (checkbox, popup de <select>, date picker) acompañan
+     al tema: sin esto salen siempre claros aunque la interfaz esté en dark. */
+  color-scheme: light;
+
+  --paper-rgb: 247 242 233;
+  --paper-2-rgb: 239 232 218;
+  --paper-3-rgb: 231 223 205;
+  --card-rgb: 255 252 246;
+
+  --ink-rgb: 26 22 18;
+  --ink-2-rgb: 58 51 42;
+  --ink-3-rgb: 106 96 79;
+  /* ink-4 en claro: subido de 163 152 132 (~2.5:1 sobre paper, por debajo
+     del mínimo) a ~3.5:1 — lo usan timestamps y hints a 10-11px. Mantiene la
+     jerarquía respecto a ink-3 (más oscuro). El de dark ya se corrigió. */
+  --ink-4-rgb: 138 128 112;
+
+  --brand-ink-rgb: 63 69 37;
+
+  /* Fondo suave de marca (chips activos, tarjetas seleccionadas). En claro es
+     el pistacho pálido de la escala; en dark, un tinte translúcido del brand
+     sobre el papel oscuro. Lo consume el token Tailwind `bg-brand-soft`. */
+  --brand-soft: #eef2d0;
+
+  --line: rgba(26, 22, 18, 0.10);
+  --line-2: rgba(26, 22, 18, 0.06);
+
+  /* Sombras Coro por tema: en claro, tinta cálida muy diluida; en dark esa
+     misma tinta desaparece sobre gris oscuro, así que se sustituyen por negro
+     más denso (ver .dark). Las consume tailwind.config.js (shadow-coro-*). */
+  --shadow-coro-1: 0 1px 2px rgba(26, 22, 18, 0.06), 0 1px 0 rgba(26, 22, 18, 0.04);
+  --shadow-coro-2: 0 4px 14px rgba(26, 22, 18, 0.08), 0 1px 0 rgba(26, 22, 18, 0.04);
+  --shadow-coro-3: 0 12px 36px rgba(26, 22, 18, 0.14);
+
+  /* Marca y estados: idénticos en claro y oscuro. */
+  --brand: #dbe09e;
+  --brand-600: #c6cc85;
+  --brand-700: #9da362;
+  --brand-on: #1a1612;
+
+  --ch-wa: #25d366;
+  --ch-web: #6c7bff;
+  --ch-voice: #9b8afb;
+
+  --state-ok: #2da771;
+  --state-warn: #e58a2f;
+  --state-bad: #dc4b3c;
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* Gris oscuro neutro (sustituye al marrón cálido anterior). Ligerísimo
+     tinte frío para contrastar con el pistacho de marca. */
+  --paper-rgb: 23 24 26;
+  --paper-2-rgb: 31 33 36;
+  --paper-3-rgb: 42 44 48;
+  --card-rgb: 30 32 35;
+
+  --ink-rgb: 233 235 238;
+  --ink-2-rgb: 197 200 205;
+  --ink-3-rgb: 146 150 157;
+  /* ink-4 algo más claro en dark: lo usa mucho texto secundario (horas, hints)
+     y a 92/96/102 quedaba por debajo del contraste mínimo. Sube a ~3.6:1 sobre
+     paper sin perder la jerarquía respecto a ink-3. */
+  --ink-4-rgb: 120 125 132;
+
+  --brand-ink-rgb: 247 248 232;
+
+  --brand-soft: rgba(219, 224, 158, 0.14);
+
+  --line: rgba(235, 237, 240, 0.10);
+  --line-2: rgba(235, 237, 240, 0.06);
+
+  --shadow-coro-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(0, 0, 0, 0.25);
+  --shadow-coro-2: 0 4px 14px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(0, 0, 0, 0.25);
+  --shadow-coro-3: 0 12px 36px rgba(0, 0, 0, 0.60);
+}
+
+/* Variables de color completas derivadas de los canales. Se definen una sola
+   vez: al heredar el canal sobreescrito por `.dark`, estas también cambian.
+   Las consumen los estilos inline y reglas CSS que usan `var(--paper)` etc. */
+:root {
+  --paper: rgb(var(--paper-rgb));
+  --paper-2: rgb(var(--paper-2-rgb));
+  --paper-3: rgb(var(--paper-3-rgb));
+  --card: rgb(var(--card-rgb));
+
+  --ink: rgb(var(--ink-rgb));
+  --ink-2: rgb(var(--ink-2-rgb));
+  --ink-3: rgb(var(--ink-3-rgb));
+  --ink-4: rgb(var(--ink-4-rgb));
+
+  --brand-ink: rgb(var(--brand-ink-rgb));
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    background-color: var(--paper);
+    color: var(--ink);
+  }
+  ::selection {
+    background: var(--brand);
+    color: var(--brand-on);
+  }
+}
+
+/* ============================================================
+   Componentes Coro
+   ============================================================ */
+@layer components {
+  /* Buttons — todas las variantes incluyen la base para que funcionen
+     standalone (className="btn-primary" sin necesitar también "btn"). */
+  .btn,
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-coro-sm
+           px-3.5 py-2 text-sm font-medium border transition-all
+           focus:outline-none focus:ring-2 focus:ring-brand/30
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 40px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .btn {
+    @apply border-line bg-card text-ink hover:bg-paper2;
+  }
+  .btn-primary {
+    @apply bg-brand text-brand-on border-transparent hover:bg-brand-600;
+  }
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-ink2 hover:bg-paper2;
+  }
+  .btn-danger {
+    @apply bg-state-bad text-white border-transparent hover:opacity-90;
+  }
+  /* Modificador de tamaño — se aplica DESPUÉS y prevalece. */
+  .btn-sm {
+    @apply px-2.5 py-1.5 text-xs gap-1.5;
+    min-height: 32px;
+  }
+  /* Iconos dentro de botones: asegurar tamaño consistente y no deformación. */
+  .btn svg,
+  .btn-primary svg,
+  .btn-ghost svg,
+  .btn-danger svg {
+    @apply w-4 h-4 shrink-0;
+  }
+  .btn-sm svg {
+    @apply w-3.5 h-3.5;
+  }
+  /* Botón icon-only (sin texto, cuadrado): añade .btn-icon. */
+  .btn-icon {
+    @apply px-0 w-10 justify-center;
+    min-width: 40px;
+  }
+  .btn-icon.btn-sm {
+    @apply w-8;
+    min-width: 32px;
+  }
+
+  /* Inputs */
+  .input,
+  .textarea {
+    @apply bg-card border border-line rounded-coro-sm px-3 py-2 text-sm text-ink
+           placeholder:text-ink4 focus:border-brand focus:ring-2 focus:ring-brand/30
+           outline-none transition-colors w-full;
+  }
+  .textarea {
+    @apply min-h-[88px] resize-y;
+  }
+  .label {
+    @apply block text-xs uppercase tracking-wider text-ink3 font-medium mb-1;
+  }
+
+  /* Surfaces */
+  .card {
+    @apply bg-card border border-line rounded-coro shadow-coro-1;
+  }
+
+  /* Badges & pills */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium
+           border border-line bg-paper2 text-ink2;
+  }
+  .badge-brand {
+    @apply bg-brand/15 text-brand-ink border-transparent;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium
+           border border-line bg-paper2 text-ink2;
+  }
+  .pill .dot {
+    @apply inline-block w-1.5 h-1.5 rounded-full bg-ink3;
+  }
+
+  /* Typographic helpers */
+  .eyebrow {
+    @apply font-medium text-ink3;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .h-display {
+    @apply font-display font-normal text-ink;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+  h1.h-display {
+    font-size: 3rem;
+  }
+  h2.h-display {
+    font-size: 2rem;
+  }
+  h3.h-display {
+    font-size: 1.4rem;
+  }
+  @media (max-width: 640px) {
+    h1.h-display {
+      font-size: 2.25rem;
+    }
+    h2.h-display {
+      font-size: 1.6rem;
+    }
+    h3.h-display {
+      font-size: 1.2rem;
+    }
+  }
+  .numbers {
+    @apply font-numbers;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* Palabra acentuada — subrayado recto en el color de marca. */
+  .accent {
+    font-style: italic;
+    text-decoration: underline;
+    text-decoration-color: var(--brand-600);
+    text-decoration-thickness: 3px;
+    text-underline-offset: 4px;
+    text-decoration-skip-ink: none;
+  }
+}
+
+/* ============================================================
+   Correo HTML en modo oscuro
+   El cuerpo de un email es HTML ajeno con colores inline pensados
+   para fondo claro (texto #000, fondos #fff…). En dark no podemos
+   reescribirlos, así que —como hacen los clientes de correo— lo
+   servimos sobre una "hoja" clara con texto y enlaces oscuros.
+   En claro no cambia nada. Los emails de texto plano no llevan
+   esta clase y siguen los tokens del tema.
+   ============================================================ */
+.dark .email-html-content {
+  background: #fffcf6;
+  color: #1a1612;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.dark .email-html-content a {
+  color: #3f4525; /* brand-ink del tema claro: legible sobre la hoja */
+}
+
+/* ============================================================
+   Scrollbar fina (Coro)
+   ============================================================ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--line);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ink-4);
+}
