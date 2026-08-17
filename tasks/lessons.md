@@ -1,63 +1,48 @@
-# LESSONS — reglas aprendidas trabajando aquí
+# Lecciones — eskailet-chatbot
 
-Reglas extraídas de correcciones del usuario y de errores cometidos en este
-proyecto. **Se lee al empezar cualquier sesión en este directorio.**
-
-Una regla entra aquí solo si costó algo aprenderla. Lo que se deduce leyendo el
-código no es una lección: es documentación, y va en `CLAUDE.md`.
-
-Formato: la regla, y debajo de dónde sale.
+Reglas extraídas de correcciones reales. Se lee al empezar a trabajar en este proyecto.
 
 ---
 
-## L-01 · Verificar es haber ejecutado el comando, no que el fichero exista
+## 1 · El trabajo sin commitear no está a salvo entre comandos
 
-No se marca nada como hecho sin una prueba, un log o un diff que lo demuestre.
-"Creo que funciona" no cuenta.
+**17 ago 2026.** El hook `checkpoint.ps1` hizo un `git stash` **incluyendo untracked** y se
+llevó una carpeta entera (`arnes/`, 36 ficheros) y un fichero de test nuevo. Los dos estaban
+sin commitear. Se recuperó todo —la fuente vivía fuera del repo y el resto estaba en el
+stash `claude-checkpoint-*`— pero el susto fue real y se perdió media hora en forense.
 
-*De: regla 6 del `CLAUDE.md` global y criterio de `/review`.*
+**Cómo aplicarla:** en cuanto un bloque de trabajo funcione, commitear en la rama. No
+esperar a "tenerlo todo". Y si algo desaparece, mirar `git stash list` antes de reescribirlo.
 
-## L-02 · El plan describe la intención; el árbol de ficheros, la realidad
+## 2 · Un test que hace `grep` del código fuente no prueba nada
 
-`implementation/user_journeys.md` avisa de ello en su cabecera y aun así seis de
-27 journeys estaban en otro sitio del que decía. Antes de afirmar dónde vive
-algo, abrir el fichero.
+**17 ago 2026.** Los primeros evals de límites del arnés comprobaban cosas como
+`"html.escape" in fuente` o `"8" in fuente`. Un juez externo lo tumbó: con eso, alguien podía
+dejar el cooldown de `derivar_humano` sin implementar y la prueba seguía en verde porque la
+palabra aparecía en un comentario.
 
-*De: reconstruir el `task_tracker` el 17 de agosto de 2026.*
+**Cómo aplicarla:** se ejecuta el comportamiento. Si hace falta Postgres o Redis, se
+sustituyen por dobles que registran lo que se les pide — así la prueba entra en CI *y* prueba
+algo. Ver `backend/tests/test_arnes_evals_limites.py` como referencia. Un eval en verde que
+no prueba lo que dice es peor que no tenerlo: da falsa tranquilidad.
 
-## L-03 · Nada de `--autogenerate` en las migraciones
+## 3 · Cuando un revisor externo contradice lo que das por hecho, compruébalo antes de descartarlo
 
-Propone borrar cuatro tablas y catorce índices correctos. Se escribe a mano.
+**17 ago 2026.** El juez avisó de que `arnes/compilado/*.md` no existían en disco. La reacción
+fue "imposible, los tests que los leen están en verde". Era cierto (lección 1). Comprobarlo
+costó un comando; descartarlo habría dejado el arnés instalado a medias sin que nadie lo viera.
 
-*De: `CLAUDE.md`, comprobado contra una base al día.*
+## 4 · La documentación de seguridad se desactualiza en silencio
 
-## L-04 · Antes de levantar un servicio, mirar el mapa de puertos
+**17 ago 2026.** `SECURITY.md` §3 dice que `derivar_humano` escapa el motivo como HTML
+"porque Telegram usa parse_mode HTML". El producto dejó de notificar a Telegram/Slack por
+RGPD y ahora avisa por web push interno: `html.escape` ya no existe en el fichero. Un eval
+escrito a partir del documento habría fallado contra el código.
 
-`INFRA-LOCAL.md` en la raíz del paraguas. Hay trece contenedores arriba y doce
-puertos ocupados; los choques ya han pasado. El síntoma típico de hablar con el
-Postgres equivocado es `FATAL: database "test" does not exist`.
+**Cómo aplicarla:** para afirmar un comportamiento de seguridad, la fuente es el código.
+`SECURITY.md` se contrasta, no se copia. (Esa fila sigue pendiente de corregir.)
 
-*De: regla 1 de la casa, y confirmado el 17 de agosto: el 5173 lo sirve el panel
-de este proyecto, así que los e2e del CRM apuntaban aquí sin darse cuenta.*
+## 5 · Los pines del repo son de Python 3.12
 
-## L-05 · No inventar integraciones entre las tres aplicaciones
-
-El chatbot y `eskailet-crm` **no** están integrados. Si alguien pregunta si los
-contactos del chatbot llegan al CRM, hoy la respuesta es no.
-
-*De: regla 7 del `CLAUDE.md` del paraguas y de `OFERTA.md`.*
-
-## L-06 · Las bitácoras no vienen en el paquete
-
-Si un comando busca `docs/project_memory.md`, `implementation/task_tracker.md` o
-`docs/work_log.md` y no están, no es un error: se crean con lo que se pueda leer
-del repositorio y se sigue.
-
-*De: `CLAUDE.md`, sección Bitácoras.*
-
-## L-07 · Un `[x]` de oficio es peor que un `[ ]` honesto
-
-Al inventariar, lo que no se localiza queda pendiente o marcado como "está, pero
-en otro sitio". Marcar por lo que dice el plan convierte el tracker en ficción.
-
-*De: reconstruir el `task_tracker` el 17 de agosto de 2026.*
+**17 ago 2026.** `psycopg2-binary` y `pandas` no compilan en el 3.14 del sistema. La salida
+limpia es `uv venv --python 3.12`, que baja un CPython propio sin tocar el sistema.

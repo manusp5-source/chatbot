@@ -179,14 +179,28 @@ def evaluar(texto: str | None) -> Veredicto | None:
 # respuesta viajan juntos.
 # ---------------------------------------------------------------------------
 
+# Estos dos textos son, muchas veces, LO PRIMERO que lee el paciente: el
+# guardarrail corre antes del modelo, asi que aqui no hay ningun LLM al que
+# pedirle que se presente. Por eso la frase de transparencia va escrita en el
+# propio texto y no en el prompt.
+#
+# Reglamento (UE) 2024/1689 (Reglamento de IA), art. 50, aplicable desde el 2 de
+# agosto de 2026: la persona tiene que saber que interactua con un sistema de IA,
+# y saberlo como muy tarde en la primera interaccion. Un mensaje que dice "ya les
+# he avisado y te escriben" sin decir quien lo escribe da a entender justo lo
+# contrario.
+_SOY_UN_SISTEMA = "Soy el asistente virtual del centro, no una persona. "
+
 MENSAJE_URGENCIA = (
-    "Por lo que me cuentas, esto lo tiene que ver una persona del equipo ahora mismo. "
+    _SOY_UN_SISTEMA
+    + "Por lo que me cuentas, esto lo tiene que ver una persona del equipo ahora mismo. "
     "Te paso con la clinica y te contestan en cuanto puedan. "
     "Si es urgente y no pueden atenderte, llama al 112 o acude a un servicio de urgencias."
 )
 
 MENSAJE_CLINICO = (
-    "Esto prefiero que te lo conteste alguien del equipo, que para temas de salud "
+    _SOY_UN_SISTEMA
+    + "Esto prefiero que te lo conteste alguien del equipo, que para temas de salud "
     "no quiero darte yo una respuesta. Ya les he avisado y te escriben en cuanto puedan."
 )
 
