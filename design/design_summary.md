@@ -116,6 +116,59 @@ resumen: la verdad es el modelo en `backend/app/models/`.
 - `agent_trace_event`: traza de cada paso del agente, visible por conversación.
 - `audit_log`: quién hizo qué en el panel.
 
+## Verification Commands
+
+Lo que hay que ejecutar para decir que algo funciona. Verificar es haber corrido
+el comando y mirado la salida, no que el fichero exista.
+
+**Levantar y comprobar que responde**
+
+```bash
+cp .env.desarrollo.example .env     # y rellenar las tres claves (ver CLAUDE.md)
+docker compose up -d
+curl http://localhost:8000/health   # 200; espera ~30 s al arranque
+open http://localhost:5173          # panel
+```
+
+`/health` devuelve **200 aunque el worker esté caído**, a propósito: mira el
+campo `worker` del cuerpo, no el código de estado.
+
+**Pruebas del backend** (desde `backend/`, con una base pgvector aparte —
+Postgres del Compose no publica puerto al host)
+
+```bash
+docker run -d --name chatbot-test-db -p 5466:5432 \
+  -e POSTGRES_USER=chatbot -e POSTGRES_DB=test -e POSTGRES_HOST_AUTH_METHOD=trust \
+  pgvector/pgvector:pg16
+
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+export DATABASE_URL="postgresql+asyncpg://chatbot@127.0.0.1:5466/test"
+export ENCRYPTION_KEY="<clave Fernet>"     # obligatoria aunque no cifres nada
+.venv/bin/alembic upgrade head
+.venv/bin/pytest -q
+```
+
+Sin base de datos se saltan unas 290 pruebas y fallan cuatro. Usa un puerto
+libre: si hay otro Postgres delante, el síntoma es
+`FATAL: database "test" does not exist`.
+
+**Migraciones, ida y vuelta** (lo que exige la CI)
+
+```bash
+.venv/bin/alembic upgrade head && .venv/bin/alembic downgrade -1 && .venv/bin/alembic upgrade head
+```
+
+**Panel**
+
+```bash
+cd frontend && npm ci && npx tsc --noEmit -p tsconfig.json && npm run build
+```
+
+**Todo junto**, tal como lo ejecuta `.github/workflows/ci.yml`: pruebas del
+backend contra Postgres real, migraciones en los dos sentidos, tipos y build del
+panel, y construcción de las tres imágenes Docker. `ruff` sale en el informe
+pero **no bloquea**.
+
 ## Credenciales
 
 - **En el `.env`:** `DATABASE_URL`, `REDIS_URL`, `CELERY_BROKER_URL`,

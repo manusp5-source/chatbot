@@ -236,7 +236,10 @@ async def test_resend_error_de_red(monkeypatch):
 @pytest.mark.asyncio
 async def test_remitente_con_dominio_verificado(monkeypatch):
     token, ids = await _admin_token()
-    await _guardar(resend_api_key="re_de_mentira", resend_from_email="Avisos <hola@example.com>")
+    # El remitente tiene que estar EN el dominio que RESEND_VERIFICADO da por
+    # verificado (chatbot.com). Con otro dominio, el servicio responde ok=False
+    # —y hace bien—, que es justo lo que cubre el test siguiente.
+    await _guardar(resend_api_key="re_de_mentira", resend_from_email="Avisos <hola@chatbot.com>")
 
     _falsear_get(monkeypatch, lambda url, kw: httpx.Response(200, json=RESEND_VERIFICADO))
     try:
