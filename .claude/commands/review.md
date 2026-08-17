@@ -17,11 +17,11 @@ The subagent must:
 1. Read `implementation/task_tracker.md` to identify recently completed items
 2. Read `implementation/user_journeys.md` to check acceptance criteria
 3. For each completed User Journey:
-   - Verify backend endpoints exist and have auth checks
+   - Verify backend endpoints by executing: start the server (Verification Commands in design_summary.md) and call each endpoint, confirming responses and auth checks from actual output — not just that the code exists
    - Verify frontend page exists and is reachable from navigation
    - Verify the security checklist was applied
    - Check for functional gaps (missing error states, empty states, navigation links)
-   - Check that automated tests exist for critical paths
+   - Run the automated tests for critical paths and confirm they pass; run lint/build if the project has them. Verification means executed commands with confirmed output, not files that exist
 4. For each completed Infrastructure Task:
    - Verify the component works and is properly integrated
    - Verify the security checklist was applied

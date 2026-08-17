@@ -11,8 +11,9 @@ description: Arranca una nueva sesion de trabajo. Lee el estado del proyecto y m
 > because a tracking file is not there.
 
 1. Read `docs/project_memory.md` — note current state, last completed work, next task, blockers
-2. Read `implementation/task_tracker.md` — identify next task/journey, check for incomplete work
-3. State resumption point explicitly:
+2. Read `implementation/task_tracker.md` — identify the `WIP` task, or the first `TODO`, and check for incomplete work
+3. If anything is unclear, `git log --oneline` is additional memory: each `M0-IT-001` / `M1-UJ-001` commit shows what was actually completed
+4. State resumption point explicitly:
 
 ## Session Start Summary
 
