@@ -76,9 +76,21 @@ sirve— y el test y el cambio del guardarraíl se recuperaron del stash.
 **Lección, y va a `lessons.md`: en este repositorio el trabajo sin commitear no está a salvo
 entre comandos.** Commitear en la rama antes de seguir.
 
+**El hook volvió a hacerlo.** Segunda vez (`claude-checkpoint-...-200854`), llevándose lo
+mismo. Recuperado otra vez del stash y **commiteado de inmediato** en `5207a26`. La lección 1
+de `tasks/lessons.md` no es teórica: pasó dos veces en la misma sesión.
+
+**`L9` marcado `xfail(strict=True)`**, no silenciado. El test sigue ejecutándose y el hueco
+sigue en el informe como `xfailed`; el caso sigue en `passes: false` en `evals.json`, que es
+el libro de cuentas. `strict=True` es lo importante: el día que alguien implemente la
+revelación, la prueba pasa a **XPASS y rompe la build**, obligando a actualizar el arnés en
+vez de dejar el hueco marcado como aceptable para siempre. Suite del arnés:
+`13 passed, 1 xfailed`.
+
 ## Notas para retomar
 
-Rama actual: `feat/factoria-artefactos`. **No se ha commiteado nada.**
+Rama actual: `feat/factoria-artefactos`, **commiteado** (`5207a26` + el `xfail`).
+Sin remote: sigue sin haber copia fuera de la máquina (eso es la Oleada 0).
 
 1. **Decidir `L9` mitad B** — revelación determinista en el primer mensaje de una
    conversación normal. `conversation.py` ramifica el envío por canal (borradores de Gmail,

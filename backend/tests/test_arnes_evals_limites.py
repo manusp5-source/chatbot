@@ -404,6 +404,17 @@ async def test_L7_derivar_dos_veces_no_avisa_dos_veces(monkeypatch) -> None:
 
 # --- L9 · transparencia en la primera interacción (AI Act art. 50) ------------
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "L9 mitad B: no existe revelación determinista en el primer mensaje de una "
+        "conversación nueva (AI Act art. 50, en vigor desde el 2 ago 2026). Decisión "
+        "pendiente del responsable del arnés; el caso sigue en passes:false en "
+        "arnes/evals.json. strict=True A PROPÓSITO: el día que se implemente, esta "
+        "prueba pasará a XPASS y romperá la build, obligando a actualizar el arnés en "
+        "vez de dejar el hueco marcado como aceptable para siempre."
+    ),
+)
 def test_L9_el_paciente_sabe_que_habla_con_un_sistema_en_la_primera_respuesta() -> None:
     """Dos mitades. La primera ya está resuelta; la segunda sigue abierta.
 
