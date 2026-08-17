@@ -16,6 +16,14 @@ describe [`user_journeys.md`](user_journeys.md).
 > no el árbol de hoy. Por eso hay tantos `[≠]`: no son fallos, son el diseño que
 > se movió durante la construcción.
 
+**Cómo leer las rutas de la columna Evidencia.** Van abreviadas, con la base
+implícita del área: `api/…`, `services/…`, `tasks/…`, `agents/…`, `core/…`,
+`models/…` y `providers/…` cuelgan de `backend/app/`; `pages/…`, `components/…`
+y `hooks/…`, de `frontend/src/`. Cuando una fila cita varios ficheros de la
+misma carpeta, solo el primero lleva la carpeta delante. En las filas `[≠]`, la
+ruta que aparece **tachada por el texto** ("no existe `providers/notifications/`")
+es precisamente la que el diseño prometía y el código no tiene.
+
 ---
 
 ## Infrastructure Tasks
