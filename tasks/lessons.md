@@ -40,7 +40,13 @@ RGPD y ahora avisa por web push interno: `html.escape` ya no existe en el ficher
 escrito a partir del documento habría fallado contra el código.
 
 **Cómo aplicarla:** para afirmar un comportamiento de seguridad, la fuente es el código.
-`SECURITY.md` se contrasta, no se copia. (Esa fila sigue pendiente de corregir.)
+`SECURITY.md` se contrasta, no se copia.
+
+**Corregido el 17 ago 2026**: el desfase no era una fila, eran nueve sitios. Telegram y
+Slack se retiraron del producto entero (las alertas van a los Logs en vivo del panel) y el
+documento seguía diciéndole al operador que configurase `telegram_bot_token` "porque es lo
+que te avisa de que alguien está abusando del bot". Quien lo siguiera creería tener un canal
+de alertas que no existe.
 
 ## 5 · Los pines del repo son de Python 3.12
 

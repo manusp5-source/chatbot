@@ -18,7 +18,7 @@ con cada cambio.
 | **Operador** (rol `cliente`) | Media | Lee/responde conversaciones. Puede borrar contactos/etiquetas. No accede a `/admin/*`. **Ve toda la base de contactos**, ver aviso debajo. |
 | **Usuario final de cualquier canal** | **Nula** | Cualquier persona del mundo con tu número, tu Instagram, tu web, tu teléfono o tu correo. Toda entrada se considera adversaria. |
 | **Proveedores de canal** (YCloud, Meta, Retell, Google) | Alta | Cada webhook entrante se verifica antes de procesarlo. Detalle en [§ 2.3](#23-canales-de-entrada-quién-entra-y-qué-lo-protege). |
-| **OpenAI / Anthropic / Gemini / Resend / Telegram / Slack** | Alta | Conexiones HTTPS salientes, sin entrada de datos. |
+| **OpenAI / Anthropic / Gemini / Resend** | Alta | Conexiones HTTPS salientes, sin entrada de datos. |
 | **Cliente MCP con token de agente** | Media | Es un servicio expuesto a internet. Con ámbito de escritura puede reescribir el prompt del bot. Ver [§ 2.4](#24-servidor-mcp-y-tokens-de-agente). |
 | **EasyPanel host** | Alta | Tiene acceso al volumen Postgres y a las env vars. |
 
@@ -62,7 +62,7 @@ momento (`/admin/audit`), así que el acceso no es anónimo.
 ### 2.2 Credenciales de proveedor
 - Almacenadas cifradas con Fernet (`ENCRYPTION_KEY`) en la tabla `credentials`.
 - Lectura desde la BD vía `services.credentials.get_credential` con caché en memoria de 30s e invalidación al actualizar.
-- Las claves de OpenAI/YCloud/Meta/Resend/Telegram/Slack **nunca** se leen de env vars en producción — solo desde la tabla cifrada.
+- Las claves de OpenAI/YCloud/Meta/Resend **nunca** se leen de env vars en producción — solo desde la tabla cifrada. (Telegram y Slack se retiraron: `_HIDDEN_PROVIDERS` en `api/admin.py` ya ni los ofrece.)
 - El admin las gestiona desde `/admin/connections` (pestaña **Servicios**).
 - Las claves **por canal** de Instagram (`app_secret`, `page_access_token`,
   `verify_token`) y de Retell (`api_key`, `webhook_secret`) van igual de
@@ -247,17 +247,17 @@ bot es siempre alguien de fuera.
 | Suplantación de contacto vía `crear_actualizar_contacto("telefono":"+34X")` | El teléfono se fuerza al de `ctx` (webhook), se ignora el de args, intento se notifica. | `agents/tools/contact_upsert.py` |
 | Fuga PII vía `buscar_contacto(email="jefe@empresa.com")` | La tool no acepta parámetros, solo devuelve datos del propio contacto. | `agents/tools/contact_lookup.py` |
 | Dump del KB | `top_k≤8`, query ≤500 chars, contenido truncado a 1200 chars. | `agents/tools/kb_search.py` |
-| Spam al canal del equipo vía `derivar_humano` | Cooldown 10 min por conversación, idempotente si ya derivada/cerrada, motivo/resumen escapados HTML y truncados. | `agents/tools/human_handoff.py` |
+| Spam al canal del equipo vía `derivar_humano` | Cooldown 10 min por conversación, idempotente si ya derivada/cerrada, motivo truncado a 200 caracteres. El aviso es **interno**: web push a la PWA del operador + la conversación aparece en la bandeja. No sale nada a plataformas de terceros. | `agents/tools/human_handoff.py` |
 | DoS económico OpenAI | 10 msg/min · 60 llamadas LLM/h por contacto. Mensajes truncados a 4000 chars antes del LLM. Audios > 8 MB rechazados. | `services/agent_guardrails.py`, `services/audio_processor.py` |
 | Blocklist persistente | 5 infracciones de rate-limit en 10 min → bloqueo automático 24h. Visible y desbloqueable en `/admin/blocklist`. | `services/agent_guardrails.py`, UI `BlocklistPage.tsx` |
 | Contenido tóxico/jailbreak | API de moderación de OpenAI (`omni-moderation-latest`) antes del LLM. Si se marca → no se contesta, pasa a humano, alerta al canal. **Solo funciona si hay `openai_api_key`**, aunque uses otro proveedor de IA: ver [§ 9](#9-proveedor-de-ia-y-moderación-de-contenido). | `services/moderation.py` |
 | Prompt injection | (a) Capa fija de seguridad antepuesta al prompt por el sistema, no editable desde el panel. (b) Prompt plantilla de los agentes con reglas explícitas. (c) Defensa en código: las tools no obedecen al LLM si intenta saltarse el contrato. | `services/runtime_config.py:SECURITY_GUARD`, seed `PROMPT_PLANTILLA_TEXTO` / `PROMPT_PLANTILLA_VOZ`, todas las tools |
-| Inyección HTML en alertas al equipo | `html.escape` en motivo/resumen antes de `notify_team` (Telegram usa parse_mode HTML). | `agents/tools/human_handoff.py`, `services/security_alerts.py` |
+| Inyección HTML en avisos al equipo | Ya no hay canal externo que renderice HTML. Donde sí se compone HTML (el resumen de conversación) se escapa con `html.escape`. | `api/conversations.py`, `services/security_alerts.py` |
 | Iteración runaway del agente | `MAX_ITERATIONS=5` en el orchestrator. | `agents/orchestrator.py` |
 
 ### Alertas de seguridad
 
-`services/security_alerts.notify_security(kind, title, details, throttle_key)` envía al canal Telegram/Slack con prefix `[SEGURIDAD]`. Throttling 10 min por `(kind, throttle_key)` para no inundar.
+`services/security_alerts.notify_security(kind, title, details, throttle_key)` publica la alerta en los **“Logs en vivo” del panel** (`push_runtime_log`). Telegram y Slack se retiraron a propósito: no se exfiltran datos del cliente a plataformas de terceros (RGPD), y el panel es suficiente. Throttling 10 min por `(kind, throttle_key)` para no inundar.
 
 Se dispara automáticamente en:
 
@@ -267,7 +267,7 @@ Se dispara automáticamente en:
 - `moderation_flagged` — contenido marcado por moderación
 - `phone_blocked` — contacto añadido a blocklist
 
-Sin credenciales Telegram/Slack configuradas no llegan a ningún sitio — quedan solo en el log.
+No hace falta configurar ninguna credencial externa: las alertas se ven en el panel, en **Logs en vivo**, y no salen de la instalación.
 
 ---
 
@@ -395,9 +395,10 @@ Primer login con `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`.
    - **`openai_api_key`** → además, **la moderación de contenido queda apagada**
      aunque tengas otro proveedor funcionando. Léete la [§ 9](#9-proveedor-de-ia-y-moderación-de-contenido)
      antes de decidir.
-   - **`telegram_bot_token` + `telegram_chat_id`** (o `slack_webhook_url`) → las
-     alertas de seguridad **no llegan a ningún sitio**, se quedan en el registro.
-     Es lo que te avisa de que alguien está abusando del bot: ponlo.
+   - **Alertas de seguridad: no hay nada que configurar.** Van al panel
+     (**Logs en vivo**) y a la bandeja. Telegram y Slack se retiraron; el panel
+     de conexiones ya ni los ofrece. Lo que sí tienes que hacer es **mirar los
+     Logs en vivo**: es donde te enteras de que alguien está abusando del bot.
    - **Claves del canal que vayas a usar** → sin ellas ese canal no opera.
 
 ### 6.5 Rellena el prompt de los dos agentes
@@ -485,10 +486,10 @@ Son diez minutos y se hacen una vez.
 | Cambiar el prompt de un agente | `/admin/agent/agents` — es una lista de agentes; abres el que quieras y el cambio se aplica al guardar. Queda versionado, con historial y restauración. |
 | Crear o revocar tokens de agente / MCP | `/admin/connections`, pestaña API / MCP |
 | Ver derivaciones humanas | `/inbox` filtrado por "Humano" |
-| Recibir alertas | Canal Telegram/Slack configurado en `/admin/connections` |
+| Recibir alertas | **Logs en vivo** del panel (y web push a la PWA en las derivaciones) |
 | Health en vivo | `/admin/health` |
 
-### Si Telegram empieza a recibir `[SEGURIDAD] Contacto bloqueado por abuso`
+### Si en Logs en vivo empieza a salir `[SEGURIDAD] Contacto bloqueado por abuso`
 
 - Revisa `/admin/blocklist` — verás teléfono, motivo y TTL.
 - Si es legítimo, desbloquéa.
