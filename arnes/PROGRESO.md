@@ -19,7 +19,7 @@ Memoria de trabajo del montaje. Se actualiza al cerrar cada sesión y se lee al 
 - [x] Souls compilados · [x] Fuente en `eskailet-chatbot/arnes/` (36 ficheros, `compilado/` incluido)
 - [x] Runner en `backend/tests/test_arnes_evals_limites.py`
 - [x] Entorno de pruebas: venv CPython **3.12.14** creado con `uv` (los pines del repo no resuelven en el 3.14 del sistema)
-- [ ] Prompts aplicados en Admin → Agentes de una instalación real
+- [x] Prompts aplicados en Admin → Agentes de una instalación real (19 ago 2026, demo Agendia: `gtm-clinicas/demo-voz/`)
 - [ ] Re-correr los evals sobre el agente instalado (`fase: post-instalacion`)
 
 **Fase 5 · Mejora continua** — [ ] Crons + sensor normativo
@@ -93,6 +93,33 @@ De aquí salió también la corrección de `SECURITY.md` (commit `c3b782a`): Tel
 estaban retirados del producto y el documento seguía mandando configurarlos en nueve sitios,
 incluido el checklist de pre-producción.
 
+**19 ago 2026 · primera instalación viva (canal de voz).** El arnés dejó de ser papel: el
+prompt de voz está aplicado sobre una instalación real, con la clínica ficticia «Clínica
+Dental Miralba» y una KB de 4 fichas. Agente de Retell `agent_32c8006d3c10a4f1d9979f92ce`,
+voz `cartesia-Isabel`, expuesto por túnel. Material y registro en
+`gtm-clinicas/demo-voz/README.md`.
+
+Tres cosas que solo se ven instalando, y ninguna estaba en el plan:
+
+- **La imagen que corría era de cuatro días antes** y no llevaba el arreglo del guardarraíl
+  (`_SOY_UN_SISTEMA`). Es decir: la mitad A de `L9` estaba resuelta en el código y **rota en
+  ejecución**. Reconstruida y verificada con salida real. Lección: que un arreglo esté
+  commiteado no significa que esté corriendo.
+- **`L9` mitad B queda cerrada PARA VOZ**, y sin tocar código. El saludo del canal
+  (`Channel.config.greeting`) es determinista, sale antes que el modelo y ahora dice «soy el
+  asistente virtual de…». En los canales de texto sigue abierta: esto no la resuelve.
+- **Los embeddings necesitan `openai_api_key` como credencial aparte** de la clave del
+  proveedor LLM. Con solo la del proveedor, `kb_search` iba con `vector=False` y el agente
+  no encontraba nada. No hay ningún caso del arnés que cubra esto y debería haberlo.
+
+Medido, no supuesto: rechazo de `call_id` falso → HTTP 403; llamada real → `config` + saludo
++ `ping_pong`; precio desde la KB con `vector=True`; guardarraíl clínico en 296 ms sin tocar
+el modelo.
+
+**Lo que no va fino:** 2-4 s por turno (dos viajes al LLM más embeddings; el arreglo es
+streaming, F6-bis, sin construir) y el agente no emite `[FIN_LLAMADA]`, así que no cuelga.
+Se probó `gpt-5.4-nano` y colgaba a mitad de conversación: peor. Se quedó `gpt-5.4-mini`.
+
 ## Incidente que hay que conocer
 
 El hook `checkpoint.ps1` hizo un `git stash` **con untracked**
@@ -126,8 +153,9 @@ Sin remote: sigue sin haber copia fuera de la máquina (eso es la Oleada 0).
    conversación normal. `conversation.py` ramifica el envío por canal (borradores de Gmail,
    troceado, voz), así que no se tocó. Es la única decisión que puede exigir código.
 2. ~~Cerrar el juicio de los nueve casos pendientes.~~ **Hecho** (tercera vuelta).
-3. **Los 11 casos de `funcional` y `tono`**: piden la app levantada y clave de LLM.
-   Consultar `INFRA-LOCAL.md` antes: 17 contenedores arriba.
+3. **Los 11 casos de `funcional` y `tono`**: siguen pendientes. Ya NO falta infraestructura
+   —la app está levantada, con clave de LLM y KB indexada (19 ago)— solo falta el OK de
+   coste para lanzar la tanda y un juez aparte. Es el siguiente paso natural.
 4. ~~`SECURITY.md` §3.~~ **Hecho** en `c3b782a`, y eran nueve sitios, no uno.
 5. **Antes de subir**: con `L9` en rojo, el test pone la CI en rojo. Decidir `xfail` con
    motivo o resolver `L9` primero.
