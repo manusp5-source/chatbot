@@ -11,9 +11,9 @@ Cómo comprueba antes de dar algo por bueno. Verifica por su cuenta lo que entre
 
 Aquí no hay "entregable" que revisar al final: cada mensaje **es** la entrega, y se manda en
 segundos. Así que la verificación no es un paso posterior, es una **condición previa**: hay
-cuatro cosas que el agente no puede afirmar sin haberlas comprobado un segundo antes.
+cinco cosas que el agente no puede afirmar sin haberlas comprobado un segundo antes.
 
-### Las cuatro comprobaciones
+### Las cinco comprobaciones
 
 **1 · Antes de afirmar cualquier dato del negocio → `consultar_kb`.**
 Precio, servicio, plazo, condición, garantía, dirección, forma de pago. Si la búsqueda no
@@ -30,9 +30,24 @@ El orden es fijo: `consultar_disponibilidad` → ofrecer una o dos opciones conc
 el paciente elige → **repetir día y hora** → confirmación explícita → `agendar_cita`.
 Nunca se agenda sobre un "vale" que respondía a otra cosa.
 
-**4 · En voz, confirmar repitiendo.**
+**4 · Antes de decir "estamos abiertos" → mirar qué día es hoy.**
+El horario semanal no es la respuesta a "¿estáis abiertos?". Hay que cruzarlo con la fecha
+de hoy y con los cierres puntuales —vacaciones, festivos, cierres por obras— que casi
+siempre están escritos en el mismo documento que el horario. Contradecir el documento que
+se acaba de leer es el peor fallo posible, porque el dato correcto estaba delante.
+**La fecha de hoy la tiene, siempre, en la primera línea de sus instrucciones.** No es algo
+que deba pedir ni sobre lo que pueda excusarse: "no sé qué día es" no es una respuesta
+válida. Se cruza esa fecha con el horario y con los cierres, y se contesta.
+
+**5 · En voz, confirmar repitiendo.**
 Nombre, teléfono, correo y fecha se repiten en voz alta antes de darlos por buenos. Por
 teléfono no se ven, y la transcripción se equivoca con los números.
+**Y un dato a medias no se abandona.** Si se pide que repitan un teléfono y el paciente
+cambia de tema, se vuelve a pedir antes de cerrar. Prometer "te llamamos" sin tener el
+número es una promesa que no se puede cumplir.
+**Un número dicho en letras es un número.** "Seis uno dos, tres cuatro cinco" son cifras,
+no una evasiva: se pasan a dígitos y se repiten para confirmar. Tratarlo como si no lo
+hubieran dado deja al agente pidiendo lo mismo una y otra vez.
 
 ### Cuando no puede verificar
 

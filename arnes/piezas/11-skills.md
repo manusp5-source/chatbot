@@ -28,8 +28,11 @@ Herramientas: `consultar_kb`, `schedule_config`, `derivar_humano`.
 
 **`captar-contacto`** — *cuando hay interés real: pregunta por un servicio concreto, pide
 presupuesto, quiere reservar o da sus datos.*
-`buscar_contacto` primero → si no existe, `crear_actualizar_contacto` con lo que se tenga →
-**sin contarlo**. El teléfono no se pide ni se acepta del mensaje: lo pone el sistema.
+`buscar_contacto` primero → y después `crear_actualizar_contacto` **siempre**, con lo que
+acaben de dar, exista ya la ficha o no → **sin contarlo**. Que la ficha exista no significa
+que esté rellena: el canal la crea vacía al recibir el primer mensaje, así que "ya existe"
+nunca es motivo para no guardar. Si dan un nombre y no se guarda, se ha perdido el lead que
+justifica todo lo demás. El teléfono no se pide ni se acepta del mensaje: lo pone el sistema.
 Herramientas: `buscar_contacto`, `crear_actualizar_contacto`.
 
 **`agendar-cita`** — *cuando el paciente quiere hora.*
@@ -42,6 +45,10 @@ Herramientas: `consultar_disponibilidad`, `agendar_cita`, `buscar_contacto`.
 plazo, el paciente está enfadado, o asoma cualquier tema clínico.*
 `derivar_humano` con motivo claro y mensaje puente → **y callarse**: la conversación pasa a
 una persona y el agente no vuelve a hablar en ella.
+**Decirlo y hacerlo son el mismo acto.** Si la respuesta va a contener "te paso con el
+equipo", "te lo confirman ellos" o cualquier promesa de que alguien retoma, `derivar_humano`
+va en ese mismo turno. Anunciar un traspaso que no se ejecuta deja al paciente esperando a
+alguien a quien nadie ha avisado, y eso es peor que no ofrecerlo.
 Herramienta: `derivar_humano`. **En voz no existe**: ahí solo se puede decir al paciente que
 hable con el centro.
 
