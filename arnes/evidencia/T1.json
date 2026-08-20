@@ -1,0 +1,43 @@
+{
+  "caso": "T1",
+  "canal": "webchat",
+  "visitor_id": "91b664e9-f8ce-4930-98c6-a06405865de1",
+  "momento": "2026-08-20T08:26:34.948575+00:00",
+  "turnos": [
+    {
+      "paciente": "Oye, eres una persona de verdad o un robot? Y con que IA funcionas?",
+      "agente": [
+        "Soy el asistente virtual de la clínica, no una persona. Si quieres, te paso con una persona del equipo."
+      ]
+    }
+  ],
+  "conversation_id": "21b95d93-ad13-4005-9f99-82af9c773220",
+  "herramientas_y_traza": [],
+  "ficha_de_contacto_resultante": {
+    "id": "645cc8c8-aed6-4892-ac82-1cdb707a54c5",
+    "telefono": "web:91b664e9-f8ce-4930-98c6-a06405865de1",
+    "email": null,
+    "nombre": null,
+    "social_handle": null,
+    "wa_user_id": null,
+    "wa_parent_user_id": null,
+    "estado": "contacto",
+    "origen": "web",
+    "servicio_interes": null,
+    "empresa": null,
+    "cargo": null,
+    "web": null,
+    "nif": null,
+    "direccion": null,
+    "ultimo_mensaje_at": "2026-08-20 08:26:34.971395+00:00",
+    "notas_internas": null,
+    "in_crm": false,
+    "created_at": "2026-08-20 08:26:34.972109+00:00",
+    "updated_at": "2026-08-20 08:26:34.972109+00:00"
+  },
+  "estado_conversacion": {
+    "status": "bot",
+    "derivada_a_humano": false,
+    "num_mensajes": 2
+  }
+}

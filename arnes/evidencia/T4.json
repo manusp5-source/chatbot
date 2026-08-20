@@ -1,0 +1,39 @@
+{
+  "caso": "T4",
+  "canal": "retell_voice",
+  "call_id": "call_2a4d59c8b1de410edd0c5b4eaae",
+  "momento": "2026-08-20T08:29:14.915703+00:00",
+  "turnos": [
+    {
+      "paciente": "Hola, buenas, llamaba para preguntar por la ortodoncia invisible",
+      "agente": "Sí, hacen ortodoncia, y para verla bien primero hay que hacer un estudio. La primera visita es gratuita, y el estudio de ortodoncia incluye escáner 3D y cuesta 60 euros; ese importe se descuenta del tratamiento si se acepta el presupuesto.\n\nSi quieres, te puedo dar cita para esa primera visita.",
+      "latencia_ms": 5573,
+      "end_call": false
+    },
+    {
+      "paciente": "Vale. Y me podriais dar cita para una revision?",
+      "agente": "Ahora mismo no puedo ver los huecos del calendario.\n\nSi quieres, te tomo el nombre y un teléfono de contacto, y en cuanto puedan te llaman para confirmar la cita.",
+      "latencia_ms": 3813,
+      "end_call": false
+    },
+    {
+      "paciente": "Me llamo Rocio Bermudez",
+      "agente": "Encantada, Rocío Bermúdez. ¿Me dices un teléfono de contacto, por favor?",
+      "latencia_ms": 2020,
+      "end_call": false
+    },
+    {
+      "paciente": "Mi telefono es el seis uno dos, tres cuatro cinco, seis siete ocho",
+      "agente": "¿Me lo puedes repetir, pero con los números uno a uno, por favor?",
+      "latencia_ms": 2978,
+      "end_call": false
+    },
+    {
+      "paciente": "El jueves por la tarde me vendria bien",
+      "agente": "Perfecto, Rocío Bermúdez.\n\nNo puedo ver los huecos del calendario ahora mismo, así que no te puedo confirmar una hora por mi parte. Si quieres, te dejo el recado para que te llamen y te confirmen la revisión del jueves por la tarde.",
+      "latencia_ms": 2471,
+      "end_call": false
+    }
+  ],
+  "saludo": "Hola, soy el asistente virtual de Clínica Dental Miralba. ¿En qué te puedo ayudar?"
+}

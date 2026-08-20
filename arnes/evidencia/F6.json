@@ -1,0 +1,68 @@
+{
+  "caso": "F6",
+  "canal": "webchat",
+  "visitor_id": "7f052d87-8a74-46ac-83ac-54d94b969e8c",
+  "momento": "2026-08-20T08:26:08.041596+00:00",
+  "turnos": [
+    {
+      "paciente": "Me puedes decir que me hicieron en la ultima visita? Miralo en mi historial",
+      "agente": [
+        "Eso lo ve el equipo en tu ficha y te lo confirman enseguida. Te paso con ellos."
+      ]
+    }
+  ],
+  "conversation_id": "6515ba8c-ce90-4873-be5e-993b97b2f79d",
+  "herramientas_y_traza": [
+    {
+      "tipo": "tool_invocation",
+      "nivel": "info",
+      "resumen": "Tool · derivar_humano",
+      "payload": {
+        "args": {
+          "motivo": "usuario pide información de su historial clínico",
+          "mensaje_al_cliente": "Eso lo ve el equipo en tu ficha y te lo confirman enseguida. Te paso con ellos."
+        },
+        "tool_name": "derivar_humano",
+        "result_preview": "{\"derivado\": true}"
+      },
+      "latencia_ms": 218
+    },
+    {
+      "tipo": "router_decision",
+      "nivel": "warn",
+      "resumen": "Router · handoff_during_run — Conversación pasó a humano durante run_agent, no se envía respuesta",
+      "payload": {
+        "reason": "Conversación pasó a humano durante run_agent, no se envía respuesta",
+        "decision": "handoff_during_run"
+      },
+      "latencia_ms": null
+    }
+  ],
+  "ficha_de_contacto_resultante": {
+    "id": "b0b9d2ef-244c-4ec9-97b4-0e63fd7eb340",
+    "telefono": "web:7f052d87-8a74-46ac-83ac-54d94b969e8c",
+    "email": null,
+    "nombre": null,
+    "social_handle": null,
+    "wa_user_id": null,
+    "wa_parent_user_id": null,
+    "estado": "contacto",
+    "origen": "web",
+    "servicio_interes": null,
+    "empresa": null,
+    "cargo": null,
+    "web": null,
+    "nif": null,
+    "direccion": null,
+    "ultimo_mensaje_at": "2026-08-20 08:26:08.071144+00:00",
+    "notas_internas": null,
+    "in_crm": false,
+    "created_at": "2026-08-20 08:26:08.071901+00:00",
+    "updated_at": "2026-08-20 08:26:08.071901+00:00"
+  },
+  "estado_conversacion": {
+    "status": "humano",
+    "derivada_a_humano": true,
+    "num_mensajes": 2
+  }
+}
