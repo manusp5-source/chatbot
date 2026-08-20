@@ -248,8 +248,8 @@ bot es siempre alguien de fuera.
 | Fuga PII vía `buscar_contacto(email="jefe@empresa.com")` | La tool no acepta parámetros, solo devuelve datos del propio contacto. | `agents/tools/contact_lookup.py` |
 | Dump del KB | `top_k≤8`, query ≤500 chars, contenido truncado a 1200 chars. | `agents/tools/kb_search.py` |
 | Spam al canal del equipo vía `derivar_humano` | Cooldown 10 min por conversación, idempotente si ya derivada/cerrada, motivo truncado a 200 caracteres. El aviso es **interno**: web push a la PWA del operador + la conversación aparece en la bandeja. No sale nada a plataformas de terceros. | `agents/tools/human_handoff.py` |
-| DoS económico OpenAI | 10 msg/min · 60 llamadas LLM/h por contacto. Mensajes truncados a 4000 chars antes del LLM. Audios > 8 MB rechazados. | `services/agent_guardrails.py`, `services/audio_processor.py` |
-| Blocklist persistente | 5 infracciones de rate-limit en 10 min → bloqueo automático 24h. Visible y desbloqueable en `/admin/blocklist`. | `services/agent_guardrails.py`, UI `BlocklistPage.tsx` |
+| DoS económico OpenAI | 30 msg/min (`GUARDRAIL_MAX_MESSAGES_PER_MINUTE`) · 60 llamadas LLM/h por contacto. Mensajes truncados a 4000 chars antes del LLM. Audios > 8 MB rechazados. | `services/agent_guardrails.py`, `services/audio_processor.py` |
+| Blocklist persistente | 5 infracciones de rate-limit en 10 min → bloqueo automático de **1 hora** (`AUTO_BLOCK_TTL_SECS`). Las 24 h son el bloqueo **manual** desde el panel (`BLOCKLIST_TTL_SECS`); confundirlos hace esperar un día a que caduque algo que caduca en una hora. Visible y desbloqueable en `/admin/blocklist`. | `services/agent_guardrails.py`, UI `BlocklistPage.tsx` |
 | Contenido tóxico/jailbreak | API de moderación de OpenAI (`omni-moderation-latest`) antes del LLM. Si se marca → no se contesta, pasa a humano, alerta al canal. **Solo funciona si hay `openai_api_key`**, aunque uses otro proveedor de IA: ver [§ 9](#9-proveedor-de-ia-y-moderación-de-contenido). | `services/moderation.py` |
 | Prompt injection | (a) Capa fija de seguridad antepuesta al prompt por el sistema, no editable desde el panel. (b) Prompt plantilla de los agentes con reglas explícitas. (c) Defensa en código: las tools no obedecen al LLM si intenta saltarse el contrato. | `services/runtime_config.py:SECURITY_GUARD`, seed `PROMPT_PLANTILLA_TEXTO` / `PROMPT_PLANTILLA_VOZ`, todas las tools |
 | Inyección HTML en avisos al equipo | Ya no hay canal externo que renderice HTML. Donde sí se compone HTML (el resumen de conversación) se escapa con `html.escape`. | `api/conversations.py`, `services/security_alerts.py` |
@@ -493,7 +493,7 @@ Son diez minutos y se hacen una vez.
 
 - Revisa `/admin/blocklist` — verás teléfono, motivo y TTL.
 - Si es legítimo, desbloquéa.
-- Si es ataque, déjalo bloqueado (expira solo en 24h) o crea una regla a nivel firewall.
+- Si es ataque, déjalo bloqueado o crea una regla a nivel de firewall. **Ojo con el plazo**: un bloqueo automático caduca solo en **1 hora**, no en 24. Si quieres las 24 h, bloquéalo tú desde el panel — dejarlo estar es dejarlo entrar dentro de una hora.
 
 ### Si recibes `[SEGURIDAD] Intento de suplantación de teléfono vía agente`
 
