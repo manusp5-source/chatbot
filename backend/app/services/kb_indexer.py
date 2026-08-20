@@ -311,6 +311,29 @@ def _split_units(text: str) -> list[str]:
     return units
 
 
+def _titulo_del_documento(text: str) -> str:
+    """El encabezado del documento, si lo tiene: la primera línea `# …`.
+
+    Sirve para dar contexto a los chunks que no son el primero. Sin esto, el
+    trozo que contiene "Blanqueamiento en clínica | 290 €" es una tabla suelta
+    sin ninguna pista de a qué clínica ni a qué documento pertenece, mientras
+    que el PRIMER chunk sí arrastra el título y por eso gana siempre en la
+    búsqueda por significado — incluso preguntando por lo que está en el
+    segundo. El síntoma es el peor posible para el negocio: el agente dice que
+    no tiene un precio que la clínica sí tiene.
+
+    Solo se mira el arranque del documento: un `#` a mitad de texto es una
+    sección, no el título.
+    """
+    for linea in text.lstrip().splitlines()[:3]:
+        linea = linea.strip()
+        if linea.startswith("#"):
+            return linea.lstrip("#").strip()
+        if linea:
+            break
+    return ""
+
+
 def _chunk_text(text: str, source: str, page: int | None = None) -> list[dict]:
     """Trocea respetando la ESTRUCTURA del texto: agrupa párrafos/frases
     completos hasta ~CHUNK_SIZE, con solape de la última unidad entre chunks.
@@ -318,6 +341,9 @@ def _chunk_text(text: str, source: str, page: int | None = None) -> list[dict]:
     Antes se cortaba cada CHUNK_SIZE caracteres por posición fija, partiendo
     frases y Q&As por la mitad — el embedding de medio párrafo empareja peor
     y el chunk recuperado le llegaba al agente descontextualizado.
+
+    Cada chunk que no es el primero se prefija con el título del documento, para
+    que su embedding sepa de qué habla. Ver `_titulo_del_documento`.
     """
     text = text.strip()
     if not text:
@@ -326,14 +352,27 @@ def _chunk_text(text: str, source: str, page: int | None = None) -> list[dict]:
     if page is not None:
         meta["page"] = page
 
+    titulo = _titulo_del_documento(text)
     units = _split_units(text)
     out: list[dict] = []
     current: list[str] = []
     current_len = 0
+
+    def _cerrar(partes: list[str]) -> None:
+        """Cierra un chunk, anteponiéndole el título salvo en el primero.
+
+        El primero ya lo lleva dentro (es el arranque del documento), así que
+        repetirlo lo duplicaría.
+        """
+        cuerpo = "\n\n".join(partes)
+        if titulo and out:
+            cuerpo = f"{titulo}\n\n{cuerpo}"
+        out.append({"contenido": cuerpo, "metadata": dict(meta)})
+
     for unit in units:
         # +2 por el separador "\n\n" al unir.
         if current and current_len + len(unit) + 2 > CHUNK_SIZE:
-            out.append({"contenido": "\n\n".join(current), "metadata": dict(meta)})
+            _cerrar(current)
             # Solape semántico: arrastra la última unidad (acotada) al chunk
             # siguiente para no perder el hilo entre cortes.
             tail = current[-1][-CHUNK_OVERLAP:] if len(current[-1]) > CHUNK_OVERLAP else current[-1]
@@ -342,7 +381,7 @@ def _chunk_text(text: str, source: str, page: int | None = None) -> list[dict]:
         current.append(unit)
         current_len += len(unit) + 2
     if current:
-        out.append({"contenido": "\n\n".join(current), "metadata": dict(meta)})
+        _cerrar(current)
     return out
 
 
