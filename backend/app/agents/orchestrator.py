@@ -33,6 +33,41 @@ logger = get_logger(__name__)
 MAX_ITERATIONS = 5
 
 
+async def _linea_de_hoy() -> str:
+    """Una línea con la fecha y la hora del negocio, para anteponer al prompt.
+
+    Por qué existe: el agente no tenía NINGUNA forma de saber qué día era. Con un
+    horario en la base de conocimiento y sin fecha, a "¿estáis abiertos?" solo
+    podía contestar adivinando — y adivinaba que sí, incluso con el documento de
+    vacaciones delante. Un agente de recepción que no sabe qué día es no puede
+    hacer su trabajo.
+
+    La zona horaria es la del negocio (`calendar.timezone`), no la del servidor:
+    un contenedor en UTC hacía que "esta tarde" significara otra cosa.
+
+    Ante cualquier fallo devuelve cadena vacía y el prompt se queda como estaba.
+    Saber la fecha es una mejora, no un requisito para contestar.
+    """
+    try:
+        from app.agents.tools.schedule_config import get_schedule_config, now_in
+
+        cfg = await get_schedule_config()
+        ahora = now_in(cfg.tz)
+        dias = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
+        meses = (
+            "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+            "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+        )
+        return (
+            f"Hoy es {dias[ahora.weekday()]}, {ahora.day} de {meses[ahora.month - 1]} "
+            f"de {ahora.year}, y son las {ahora:%H:%M} ({cfg.tz_name}). Usa esta fecha "
+            "para saber qué día es hoy: no la adivines ni se la preguntes a nadie.\n\n"
+        )
+    except Exception as e:  # noqa: BLE001 — sin fecha se contesta igual
+        logger.warning("agente.fecha_no_disponible", error=str(e))
+        return ""
+
+
 async def run_agent(
     system_prompt: str,
     history: list[LLMMessage],
@@ -64,7 +99,9 @@ async def run_agent(
     allowed = _resolve_allowed_tools(tools_enabled)
     tool_schemas = [t.schema for name, t in ALL_TOOLS.items() if name in allowed]
 
-    messages: list[LLMMessage] = [LLMMessage(role="system", content=system_prompt)]
+    messages: list[LLMMessage] = [
+        LLMMessage(role="system", content=await _linea_de_hoy() + system_prompt)
+    ]
     messages.extend(history)
     messages.append(LLMMessage(role="user", content=user_message))
 
