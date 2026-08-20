@@ -1,37 +1,37 @@
 {
   "caso": "T4",
   "canal": "retell_voice",
-  "call_id": "call_2a4d59c8b1de410edd0c5b4eaae",
-  "momento": "2026-08-20T08:29:14.915703+00:00",
+  "call_id": "call_d990d62c2bbb725ea41885d68b8",
+  "momento": "2026-08-20T09:12:07.673167+00:00",
   "turnos": [
     {
       "paciente": "Hola, buenas, llamaba para preguntar por la ortodoncia invisible",
-      "agente": "Sí, hacen ortodoncia, y para verla bien primero hay que hacer un estudio. La primera visita es gratuita, y el estudio de ortodoncia incluye escáner 3D y cuesta 60 euros; ese importe se descuenta del tratamiento si se acepta el presupuesto.\n\nSi quieres, te puedo dar cita para esa primera visita.",
-      "latencia_ms": 5573,
+      "agente": "Sí, trabajamos con férulas transparentes. El tratamiento completo va de 3.400 a 4.500 euros, según la complejidad, e incluye las revisiones mensuales y las retenciones del primer año.\n\nLa primera visita es gratuita y luego se hace el estudio de ortodoncia, que cuesta 60 euros y se descuenta si aceptas el tratamiento. ¿Quieres que te dé cita para valorarlo?",
+      "latencia_ms": 3499,
       "end_call": false
     },
     {
       "paciente": "Vale. Y me podriais dar cita para una revision?",
-      "agente": "Ahora mismo no puedo ver los huecos del calendario.\n\nSi quieres, te tomo el nombre y un teléfono de contacto, y en cuanto puedan te llaman para confirmar la cita.",
-      "latencia_ms": 3813,
+      "agente": "Ahora mismo no puedo ver los huecos del calendario. Si quieres, te tomo tus datos y una persona del equipo te confirma la cita.",
+      "latencia_ms": 4091,
       "end_call": false
     },
     {
       "paciente": "Me llamo Rocio Bermudez",
-      "agente": "Encantada, Rocío Bermúdez. ¿Me dices un teléfono de contacto, por favor?",
-      "latencia_ms": 2020,
+      "agente": "Encantado, Rocio Bermudez.  \n¿Me dices también un teléfono de contacto?",
+      "latencia_ms": 5009,
       "end_call": false
     },
     {
       "paciente": "Mi telefono es el seis uno dos, tres cuatro cinco, seis siete ocho",
-      "agente": "¿Me lo puedes repetir, pero con los números uno a uno, por favor?",
-      "latencia_ms": 2978,
+      "agente": "Rocío Bermúdez, el teléfono que me has dicho es 612 345 678.  \n¿Me lo confirmas, por favor?",
+      "latencia_ms": 3377,
       "end_call": false
     },
     {
       "paciente": "El jueves por la tarde me vendria bien",
-      "agente": "Perfecto, Rocío Bermúdez.\n\nNo puedo ver los huecos del calendario ahora mismo, así que no te puedo confirmar una hora por mi parte. Si quieres, te dejo el recado para que te llamen y te confirmen la revisión del jueves por la tarde.",
-      "latencia_ms": 2471,
+      "agente": "Rocío, me falta confirmar el teléfono antes de seguir.  \n¿Me repites el 612 345 678, por favor?",
+      "latencia_ms": 1329,
       "end_call": false
     }
   ],

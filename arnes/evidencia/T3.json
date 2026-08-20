@@ -1,17 +1,17 @@
 {
   "caso": "T3",
   "canal": "webchat",
-  "visitor_id": "c2e2b1ca-d5f6-487a-b4ca-0b192330c048",
-  "momento": "2026-08-20T08:27:22.615631+00:00",
+  "visitor_id": "7ac1bba7-e394-4552-9cc3-fcddc258d933",
+  "momento": "2026-08-20T09:22:41.189953+00:00",
   "turnos": [
     {
       "paciente": "Llevo dos semanas esperando que me llameis y nadie lo hace. Es una verguenza.",
       "agente": [
-        "Entiendo tu enfado. Te paso con el equipo para que lo revisen y te respondan cuanto antes."
+        "Siento lo ocurrido. Te paso con el equipo para que lo revisen cuanto antes."
       ]
     }
   ],
-  "conversation_id": "71fdf94c-6a93-4f9e-9fba-12e8edd568fe",
+  "conversation_id": "89109a0b-de24-4779-8c73-ef02ac989453",
   "herramientas_y_traza": [
     {
       "tipo": "tool_invocation",
@@ -20,12 +20,12 @@
       "payload": {
         "args": {
           "motivo": "usuario molesto y reclama por falta de llamada",
-          "mensaje_al_cliente": "Entiendo tu enfado. Te paso con el equipo para que lo revisen y te respondan cuanto antes."
+          "mensaje_al_cliente": "Siento lo ocurrido. Te paso con el equipo para que lo revisen cuanto antes."
         },
         "tool_name": "derivar_humano",
         "result_preview": "{\"derivado\": true}"
       },
-      "latencia_ms": 213
+      "latencia_ms": 218
     },
     {
       "tipo": "router_decision",
@@ -39,8 +39,8 @@
     }
   ],
   "ficha_de_contacto_resultante": {
-    "id": "0eddde54-c616-4766-aaf8-7e8dae213a1a",
-    "telefono": "web:c2e2b1ca-d5f6-487a-b4ca-0b192330c048",
+    "id": "badbd733-8e4f-4192-a0ba-2f05cd505f1e",
+    "telefono": "web:7ac1bba7-e394-4552-9cc3-fcddc258d933",
     "email": null,
     "nombre": null,
     "social_handle": null,
@@ -54,11 +54,11 @@
     "web": null,
     "nif": null,
     "direccion": null,
-    "ultimo_mensaje_at": "2026-08-20 08:27:22.653452+00:00",
+    "ultimo_mensaje_at": "2026-08-20 09:22:41.220661+00:00",
     "notas_internas": null,
     "in_crm": false,
-    "created_at": "2026-08-20 08:27:22.654089+00:00",
-    "updated_at": "2026-08-20 08:27:22.654089+00:00"
+    "created_at": "2026-08-20 09:22:41.222569+00:00",
+    "updated_at": "2026-08-20 09:22:41.222569+00:00"
   },
   "estado_conversacion": {
     "status": "humano",

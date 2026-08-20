@@ -1,17 +1,17 @@
 {
   "caso": "F3",
   "canal": "webchat",
-  "visitor_id": "c6fb35b9-01f6-4a89-a7a8-0c2d03c7d21c",
-  "momento": "2026-08-20T08:25:07.306795+00:00",
+  "visitor_id": "b6a42817-0b7f-4e70-b2ec-50f69faefc53",
+  "momento": "2026-08-20T09:19:28.932256+00:00",
   "turnos": [
     {
       "paciente": "Quiero pedir cita para una limpieza esta semana",
       "agente": [
-        "Te lo paso con el equipo para que te confirmen la cita de limpieza esta semana. Si quieres, también puedes dejarme tu nombre y correo y se lo pasan ya."
+        "Ahora mismo no puedo ver los huecos libres. Te paso con el equipo para que te confirmen la cita de limpieza."
       ]
     }
   ],
-  "conversation_id": "bc5d5b9b-9e23-422a-918c-ffd83d4c9554",
+  "conversation_id": "93365b14-abbb-4000-9ca0-dd7301b0e475",
   "herramientas_y_traza": [
     {
       "tipo": "tool_invocation",
@@ -20,9 +20,9 @@
       "payload": {
         "args": {},
         "tool_name": "buscar_contacto",
-        "result_preview": "{\"found\": true, \"id\": \"905a74f5-8d44-415c-895e-e87a7c25f74c\", \"nombre\": null, \"email\": null, \"estado\": \"contacto\", \"servicio_interes\": null}"
+        "result_preview": "{\"found\": true, \"id\": \"2b24c85b-07f8-4b2e-b295-c9f3de727ad3\", \"nombre\": null, \"email\": null, \"estado\": \"contacto\", \"servicio_interes\": null}"
       },
-      "latencia_ms": 51
+      "latencia_ms": 32
     },
     {
       "tipo": "tool_invocation",
@@ -36,35 +36,7 @@
         "tool_name": "consultar_disponibilidad",
         "result_preview": "{\"error\": \"El calendario del negocio no est\\u00e1 conectado, as\\u00ed que no puedo ver los huecos libres. No propongas horas: ofrece que una persona del equipo confirme la cita.\"}"
       },
-      "latencia_ms": 206
-    },
-    {
-      "tipo": "tool_invocation",
-      "nivel": "info",
-      "resumen": "Tool · consultar_disponibilidad",
-      "payload": {
-        "args": {
-          "fecha": "2026-08-21",
-          "duracion_min": 30
-        },
-        "tool_name": "consultar_disponibilidad",
-        "result_preview": "{\"error\": \"El calendario del negocio no est\\u00e1 conectado, as\\u00ed que no puedo ver los huecos libres. No propongas horas: ofrece que una persona del equipo confirme la cita.\"}"
-      },
-      "latencia_ms": 265
-    },
-    {
-      "tipo": "tool_invocation",
-      "nivel": "info",
-      "resumen": "Tool · crear_actualizar_contacto",
-      "payload": {
-        "args": {
-          "estado": "solicitud_presupuesto",
-          "servicio_interes": "limpieza dental"
-        },
-        "tool_name": "crear_actualizar_contacto",
-        "result_preview": "{\"updated\": true, \"id\": \"905a74f5-8d44-415c-895e-e87a7c25f74c\", \"nombre\": null}"
-      },
-      "latencia_ms": 88
+      "latencia_ms": 181
     },
     {
       "tipo": "tool_invocation",
@@ -72,36 +44,46 @@
       "resumen": "Tool · derivar_humano",
       "payload": {
         "args": {
-          "motivo": "el calendario no está conectado y el usuario quiere cita",
-          "mensaje_al_cliente": "Te lo paso con el equipo para que te confirmen la cita de limpieza esta semana. Si quieres, también puedes dejarme tu nombre y correo y se lo pasan ya."
+          "motivo": "calendario no conectado, no se pueden ver huecos",
+          "mensaje_al_cliente": "Ahora mismo no puedo ver los huecos libres. Te paso con el equipo para que te confirmen la cita de limpieza."
         },
         "tool_name": "derivar_humano",
         "result_preview": "{\"derivado\": true}"
       },
-      "latencia_ms": 318
+      "latencia_ms": 247
+    },
+    {
+      "tipo": "router_decision",
+      "nivel": "warn",
+      "resumen": "Router · handoff_during_run — Conversación pasó a humano durante run_agent, no se envía respuesta",
+      "payload": {
+        "reason": "Conversación pasó a humano durante run_agent, no se envía respuesta",
+        "decision": "handoff_during_run"
+      },
+      "latencia_ms": null
     }
   ],
   "ficha_de_contacto_resultante": {
-    "id": "905a74f5-8d44-415c-895e-e87a7c25f74c",
-    "telefono": "web:c6fb35b9-01f6-4a89-a7a8-0c2d03c7d21c",
+    "id": "2b24c85b-07f8-4b2e-b295-c9f3de727ad3",
+    "telefono": "web:b6a42817-0b7f-4e70-b2ec-50f69faefc53",
     "email": null,
     "nombre": null,
     "social_handle": null,
     "wa_user_id": null,
     "wa_parent_user_id": null,
-    "estado": "solicitud_presupuesto",
+    "estado": "contacto",
     "origen": "web",
-    "servicio_interes": "limpieza dental",
+    "servicio_interes": null,
     "empresa": null,
     "cargo": null,
     "web": null,
     "nif": null,
     "direccion": null,
-    "ultimo_mensaje_at": "2026-08-20 08:25:07.323381+00:00",
+    "ultimo_mensaje_at": "2026-08-20 09:19:28.952978+00:00",
     "notas_internas": null,
     "in_crm": false,
-    "created_at": "2026-08-20 08:25:07.324036+00:00",
-    "updated_at": "2026-08-20 08:25:20.513563+00:00"
+    "created_at": "2026-08-20 09:19:28.953674+00:00",
+    "updated_at": "2026-08-20 09:19:28.953674+00:00"
   },
   "estado_conversacion": {
     "status": "humano",
