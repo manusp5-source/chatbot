@@ -254,6 +254,14 @@ bot es siempre alguien de fuera.
 | Prompt injection | (a) Capa fija de seguridad antepuesta al prompt por el sistema, no editable desde el panel. (b) Prompt plantilla de los agentes con reglas explícitas. (c) Defensa en código: las tools no obedecen al LLM si intenta saltarse el contrato. | `services/runtime_config.py:SECURITY_GUARD`, seed `PROMPT_PLANTILLA_TEXTO` / `PROMPT_PLANTILLA_VOZ`, todas las tools |
 | Inyección HTML en avisos al equipo | Ya no hay canal externo que renderice HTML. Donde sí se compone HTML (el resumen de conversación) se escapa con `html.escape`. | `api/conversations.py`, `services/security_alerts.py` |
 | Iteración runaway del agente | `MAX_ITERATIONS=5` en el orchestrator. | `agents/orchestrator.py` |
+| El bot opinando sobre un síntoma | Guardarraíl clínico **antes** del modelo: si el mensaje trae contenido clínico o de urgencia, el LLM no llega a verlo y se deriva con un texto fijo escrito en código, no en el prompt editable. | `agents/guardarrail_clinico.py`, `agents/orchestrator.py` |
+| Lo mismo, pero repartido entre turnos | El filtro corre sobre una cadena y el modelo recibe `history` entera: «me duele la muela» derivaba, y «y qué me recomiendas para eso» pasaba al modelo con el síntoma en el historial. `evaluar_conversacion()` deriva también la continuación, y solo cuando el turno anterior fue una derivación **y** el mensaje se refiere a ella — un cambio de tema explícito sigue llegando al modelo. Se registra aparte, como `guardarrail_clinico_continuacion`. | `agents/guardarrail_clinico.py`, casos `M1`–`M3` de `arnes/evals.json` |
+
+> **Estos dos no son opcionales ni cosméticos.** `OFERTA.md` vende por escrito que
+> el bot no opina de síntomas, y el compromiso publicado en
+> agendia.es/legal/datos-de-paciente dice que ante cualquier consulta clínica el
+> sistema deriva de inmediato. Los casos `L1`, `L2`, `L8` y `M1`–`M3` del arnés son
+> esas frases convertidas en pruebas que corren en cada subida.
 
 ### Alertas de seguridad
 
