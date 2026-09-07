@@ -9,7 +9,7 @@ import uuid
 from typing import Any
 
 from app.agents.guardarrail_clinico import Veredicto
-from app.agents.guardarrail_clinico import evaluar as evaluar_guardarrail
+from app.agents.guardarrail_clinico import evaluar_conversacion as evaluar_guardarrail
 from app.agents.guardarrail_clinico import mensaje_para
 from app.agents.tools import ALL_TOOLS
 from app.core.logging import get_logger
@@ -126,7 +126,11 @@ async def run_agent(
         # puesto: la derivacion queda asociada a su conversacion en el
         # registro, que es lo que convierte esto en prueba de cumplimiento y
         # no en una buena intencion.
-        veredicto = evaluar_guardarrail(user_message)
+        # Se le pasa el historial, no solo el mensaje: el filtro corre sobre una
+        # cadena pero el modelo recibe la conversacion entera, y un paciente que
+        # continua el tema con un pronombre se saltaba el guardarrail sin
+        # proponerselo. Ver `evaluar_conversacion` y los casos M* del arnes.
+        veredicto = evaluar_guardarrail(history, user_message)
         if veredicto is not None:
             return await _derivar_por_guardarrail(veredicto, ctx, allowed)
 
@@ -212,7 +216,12 @@ async def _derivar_por_guardarrail(
         puede_derivar="derivar_humano" in allowed,
     )
     await log_router_decision(
-        decision="guardarrail_clinico",
+        # Una derivacion por lo que dice ESTE mensaje y otra por lo que venia
+        # diciendose son dos decisiones distintas. Si comparten etiqueta, nadie
+        # puede medir cuantas veces actua la cobertura multi-turno.
+        decision=(
+            "guardarrail_clinico_continuacion" if veredicto.continuacion else "guardarrail_clinico"
+        ),
         reason=veredicto.motivo,
         level=TraceLevel.warn,
     )

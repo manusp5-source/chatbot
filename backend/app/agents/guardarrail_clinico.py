@@ -64,9 +64,17 @@ class Veredicto:
     """El termino exacto que disparo el filtro. Va al registro de auditoria:
     sin el, "se derivo por contenido clinico" no es demostrable."""
 
+    continuacion: bool = False
+    """El termino no esta en ESTE mensaje, sino en un turno anterior.
+
+    Distinguirlo importa para la auditoria: "se derivo por contenido clinico"
+    y "se derivo porque el paciente seguia hablando de lo mismo" son dos
+    decisiones distintas y el equipo tiene que poder separarlas."""
+
     @property
     def motivo(self) -> str:
-        return f"Guardarrail clinico ({self.nivel.value}): «{self.termino}»"
+        sufijo = " · continuacion de la conversacion" if self.continuacion else ""
+        return f"Guardarrail clinico ({self.nivel.value}): «{self.termino}»{sufijo}"
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +174,106 @@ def evaluar(texto: str | None) -> Veredicto | None:
 
     if (m := _RE_CLINICO.search(normalizado)) is not None:
         return Veredicto(nivel=NivelClinico.clinico, termino=m.group(1))
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# El guardarrail a lo largo de la conversacion
+#
+# `evaluar()` mira una cadena. El modelo, en cambio, recibe el historial
+# entero. Eso abria un hueco que ningun eval de un turno podia ver:
+#
+#   T1 «me duele mucho la muela desde ayer»  -> deriva, el modelo no lo ve
+#   T2 «y que me recomiendas para eso»       -> ni un termino del diccionario,
+#                                               pasa al modelo... con el
+#                                               sintoma dentro del historial
+#
+# No hace falta mala fe: es como habla cualquiera. El paciente cree que sigue
+# la misma conversacion, y tiene razon.
+#
+# La correccion NO es evaluar el historial entero: entonces cualquier
+# conversacion que roce lo clinico una vez queda derivada para siempre y el
+# paciente que solo queria pedir cita se queda sin poder pedirla. Se exigen
+# las dos cosas a la vez:
+#
+#   1. el turno anterior del agente fue una derivacion (el texto fijo esta ahi
+#      y es un marcador fiable: no lo escribe el modelo)
+#   2. este mensaje se REFIERE al anterior en vez de abrir un tema nuevo
+# ---------------------------------------------------------------------------
+
+_ANAFORAS = (
+    "eso",
+    "esto",
+    "aquello",
+    "ello",
+    "lo mismo",
+    "lo de antes",
+    "lo que te dije",
+    "lo que le dije",
+    "lo que te conte",
+    "al respecto",
+)
+
+_RE_ANAFORA = _compilar(_ANAFORAS)
+
+
+def _es_referencial(texto: str) -> bool:
+    """¿Este mensaje habla de lo anterior, o abre un tema nuevo?
+
+    Deliberadamente estrecho. Un falso negativo deja pasar un mensaje al modelo
+    —malo—, pero un falso positivo atrapa al paciente en modo clinico y le
+    impide pedir cita —peor, y ademas invisible para el equipo—.
+    """
+    return _RE_ANAFORA.search(_normalizar(texto)) is not None
+
+
+def _derivacion_previa(historial) -> bool:
+    """El ultimo turno del agente fue uno de los dos textos fijos.
+
+    Se mira el texto y no una bandera de estado a proposito: estos dos mensajes
+    viven en el codigo, no en el prompt editable, asi que no puede ponerlos ahi
+    ni el modelo ni nadie desde el panel.
+    """
+    for m in reversed(list(historial or [])):
+        if getattr(m, "role", None) == "assistant":
+            return (getattr(m, "content", "") or "") in (MENSAJE_CLINICO, MENSAJE_URGENCIA)
+    return False
+
+
+def _veredicto_previo(historial) -> Veredicto | None:
+    """El veredicto del ultimo turno del paciente que disparo el filtro."""
+    for m in reversed(list(historial or [])):
+        if getattr(m, "role", None) != "user":
+            continue
+        if (v := evaluar(getattr(m, "content", ""))) is not None:
+            return v
+    return None
+
+
+def evaluar_conversacion(historial, texto: str | None) -> Veredicto | None:
+    """`evaluar()`, pero sin perder de vista los turnos anteriores.
+
+    Es la que usa el orquestador. `evaluar()` se mantiene publica y sin cambios
+    porque hay casos del arnes que la comprueban en aislamiento.
+    """
+    actual = evaluar(texto)
+    previo = _veredicto_previo(historial) if _derivacion_previa(historial) else None
+
+    # La gravedad no se degrada al cambiar de turno: si el turno anterior era
+    # una urgencia, el paciente tiene que seguir leyendo el 112 justo en el
+    # mensaje donde mas falta hace.
+    if actual is not None:
+        if (
+            previo is not None
+            and previo.nivel is NivelClinico.urgencia
+            and actual.nivel is not NivelClinico.urgencia
+        ):
+            return Veredicto(nivel=previo.nivel, termino=previo.termino, continuacion=True)
+        return actual
+
+    if previo is not None and _es_referencial(texto or ""):
+        return Veredicto(nivel=previo.nivel, termino=previo.termino, continuacion=True)
 
     return None
 
