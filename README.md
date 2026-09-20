@@ -163,9 +163,4 @@ Con `APP_ENV=development`, que es lo que trae `.env.desarrollo.example`:
 - **El panel no habla con la API.** El `CORS_ALLOWED_ORIGINS` de ejemplo apunta
   a localhost, y el compose de desarrollo publica los puertos sin SSL.
 
-## Licencia
 
-Puedes usar esta aplicación en tu negocio y montarla para clientes tuyos, sin
-límite. Lo que no puedes hacer es compartir, publicar ni vender el código ni el
-paquete descargable a nadie. Las condiciones completas están en
-[LICENCIA.md](LICENCIA.md).
