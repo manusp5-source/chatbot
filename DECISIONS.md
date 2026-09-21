@@ -1,192 +1,142 @@
 # DECISIONS — Chatbot
 
-Decisiones de arquitectura con su razón y lo que se descartó. Una decisión sin
-alternativa descartada no es una decisión: es una descripción, y esa va en
-[`design/design_summary.md`](design/design_summary.md).
+Architecture decisions, their rationale and rejected alternatives. A decision without a rejected alternative is a description; those belong in design/design_summary.md.
 
-Reconstruido el 17 de agosto de 2026 a partir del código y de `CLAUDE.md`. Las
-fechas son aproximadas salvo donde se indica.
+Reconstructed on 17 August 2026 from the codebase and CLAUDE.md. Dates are approximate unless stated otherwise.
 
 ---
 
-## DEC-01 · Un cliente por instalación, no multi-inquilino
+## DEC-01 · One customer per deployment, no multi-tenancy
 
-**Decidido:** se clona el repositorio, se configura desde el panel y se despliega
-en el servidor de ese cliente. Nada se comparte entre clientes.
+**Decision:** Clone the repository, configure it through the panel and deploy it on that customer's server. Nothing is shared between customers.
 
-**Por qué:** son datos de salud. El aislamiento por infraestructura no se puede
-equivocar; un `WHERE tenant_id` sí.
+**Why:** The system handles health data. Infrastructure isolation cannot accidentally select another customer; a tenant filter can.
 
-**Descartado:** multi-inquilino con columna discriminante — un fallo de filtro
-expone historiales clínicos de otra clínica. Y esquema por cliente en la misma
-base: sigue habiendo una credencial que abre todo.
+**Rejected:** Multi-tenancy with a discriminator column, because one filter failure could expose another clinic's records. A separate schema per customer in one database still leaves one credential that opens everything.
 
-**Coste asumido:** cada instalación se actualiza por separado.
+**Accepted cost:** Each deployment is updated separately.
 
 ---
 
-## DEC-02 · Todo proveedor externo detrás de una interfaz
+## DEC-02 · Every external provider sits behind an interface
 
-**Decidido:** ningún endpoint llama a una API de fuera. Todo pasa por
-`backend/app/providers/` (`LLMProvider`, `WhatsAppProvider`…).
+**Decision:** No endpoint calls an external API directly. All integrations go through backend/app/providers/ and interfaces such as LLMProvider and WhatsAppProvider.
 
-**Por qué:** los proveedores se caen, cambian de precio y de contrato. Hoy hay
-tres de LLM (OpenAI, Anthropic, Gemini), dos de WhatsApp (YCloud, Meta) y dos de
-correo. Cambiar uno es cambiar un fichero.
+**Why:** Providers fail and change pricing and contracts. The platform currently supports three LLM providers, two WhatsApp providers and two email providers. Replacing one provider should require changing one file.
 
-**Descartado:** llamar al SDK desde el endpoint. Más rápido de escribir y
-imposible de sustituir.
+**Rejected:** Calling an SDK from an endpoint. It is faster to write and impossible to replace cleanly.
 
 ---
 
-## DEC-03 · Los prompts viven en la base de datos
+## DEC-03 · Prompts live in the database
 
-**Decidido:** los prompts se editan desde el panel y se versionan en
-`agent_prompt_history`. En código solo está el blindaje de seguridad del agente
-interno.
+**Decision:** Prompts are edited from the panel and versioned in agent_prompt_history. Only the internal agent's security guardrails remain in code.
 
-**Por qué:** quien afina el tono del agente es el cliente, no quien despliega.
-Un prompt en un fichero exige un despliegue para cambiar una coma.
+**Why:** The customer tunes the agent's tone. A prompt file would require a deployment for every wording change.
 
-**Descartado:** prompts en ficheros versionados. Buscarlos ahí hoy es perder el
-tiempo.
+**Rejected:** Versioned prompt files. Finding the current prompt there would be slow and editing it would require deployment.
 
-**Excepción deliberada:** el blindaje anti-inyección del agente interno **sí**
-está fijo en el código, porque es una medida de seguridad y no debe poder
-desactivarse desde el panel.
+**Deliberate exception:** Internal-agent prompt-injection guardrails stay in code because they are security controls and must not be disabled from the panel.
 
 ---
 
-## DEC-04 · Cifrado en reposo solo donde duele
+## DEC-04 · Encrypt data at rest where it matters
 
-**Decidido:** `nif`, `direccion`, `notas_internas`, transcripciones y credenciales
-van cifrados con Fernet (`core/encrypted_type.py`). `telefono`, `email` y
-`nombre`, en claro.
+**Decision:** nif, direccion, notas_internas, transcripts and credentials use Fernet encryption through core/encrypted_type.py. telefono, email and nombre remain in plaintext.
 
-**Por qué:** cifrar una columna la deja fuera del alcance de SQL — ni `WHERE`, ni
-`LIKE`, ni índices. La app necesita buscar por teléfono, correo y nombre; sin
-ellos en claro no hay lista de contactos que funcione.
+**Why:** Encrypted columns cannot support SQL filters or indexes. The contact list must search by phone, email and name.
 
-**Descartado:** cifrarlo todo (rompe la aplicación) y no cifrar nada (son datos
-de salud).
+**Rejected:** Encrypting everything, which breaks the application, and encrypting nothing, which exposes health data.
 
-**Riesgo aceptado:** perder `ENCRYPTION_KEY` deja esos campos ilegibles para
-siempre, y en silencio: el tipo devuelve `None` en vez de romper.
+**Accepted risk:** Losing ENCRYPTION_KEY makes encrypted fields unreadable forever. The type returns None instead of crashing, so the loss is silent.
 
 ---
 
-## DEC-05 · El clasificador falla hacia dentro
+## DEC-05 · The classifier fails open
 
-**Decidido:** ante cualquier error, el mensaje **pasa** al agente.
+**Decision:** On any classifier error, the message continues to the agent.
 
-**Por qué:** los dos fallos posibles no cuestan lo mismo. Tragarse un spam es una
-molestia; descartar a un paciente real que pregunta por una cita es perder un
-cliente y no enterarse.
+**Why:** The two failure modes have different costs. Letting spam through is an annoyance; dropping a real patient asking about an appointment loses a customer without notice.
 
-**Descartado:** fallar hacia fuera (descartar ante la duda). Más limpio en el
-inbox, invisible cuando se equivoca.
+**Rejected:** Failing closed and dropping messages when uncertain. It keeps the inbox cleaner but hides mistakes.
 
 ---
 
-## DEC-06 · Dos pasos en el clasificador, reglas antes que LLM
+## DEC-06 · Two classifier stages, rules before the LLM
 
-**Decidido:** primero reglas duras (remitente, dominio, asunto), y solo si
-ninguna dispara, una llamada al LLM.
+**Decision:** Apply hard rules first (sender, domain and subject). Call the LLM only when no rule matches.
 
-**Por qué:** el 90 % del spam lo caza una regla que cuesta cero. Llamar al modelo
-para cada boletín es pagar por lo evidente.
+**Why:** Rules catch most spam at no model cost. Calling a model for every newsletter pays for the obvious.
 
 ---
 
-## DEC-07 · `/health` devuelve 200 con el worker caído
+## DEC-07 · /health returns 200 when the worker is down
 
-**Decidido:** el código de estado no depende del worker; el detalle va en el
-cuerpo, campo `worker`.
+**Decision:** The HTTP status does not depend on the worker; the detail appears in the worker field.
 
-**Por qué:** si `/health` fallara con el worker caído, el orquestador reiniciaría
-la API en bucle — y la API funciona perfectamente sin worker, solo se retrasan
-las tareas de fondo.
+**Why:** If /health failed while the worker was down, the orchestrator would restart the API in a loop. The API still works without the worker; only background tasks are delayed.
 
-**Descartado:** 503 cuando algo va mal. Convierte una degradación en una caída.
+**Rejected:** Returning 503 for every degraded state. That turns a partial degradation into a full outage.
 
 ---
 
-## DEC-08 · Migraciones a mano, sin `--autogenerate`
+## DEC-08 · Hand-written migrations, no autogenerate
 
-**Decidido:** `upgrade()` y `downgrade()` escritos a mano, con la cabecera
-explicando **por qué**.
+**Decision:** Write upgrade() and downgrade() by hand, with a header explaining why.
 
-**Por qué:** `--autogenerate`, comprobado contra una base al día, propone borrar
-cuatro tablas y catorce índices correctos. No los ve porque hay modelos sin
-importar en `__init__.py` y muchos índices son SQL a mano (parciales, GIN, IVFFlat).
+**Why:** Against an up-to-date database, autogenerate proposed dropping four valid tables and fourteen valid indexes. It missed models not imported by init and indexes created with hand-written SQL.
 
-**Descartado:** arreglar el autogenerado cada vez. Es más trabajo y una sola
-distracción borra una tabla en producción.
+**Rejected:** Fixing generated migrations every time. One distraction could drop a production table.
 
-**Regla que se sigue:** una migración aplicada no se edita nunca; se corrige con
-otra encima. Y toda migración lleva `downgrade()` de verdad — la CI lo comprueba.
+**Rule:** Never edit an applied migration. Add another migration. Every migration must include a real downgrade(); CI verifies it.
 
 ---
 
-## DEC-09 · El código habla español
+## DEC-09 · Human-facing text is English
 
-**Decidido:** columnas, campos, valores de enum, comentarios, textos del panel y
-nombres de prueba, en español. Nombres de tabla en inglés por herencia; nombres
-de componente React en inglés y PascalCase.
+**Decision:** Human-facing documentation, comments, panel text and test descriptions use English. Database columns, enum values, migration identifiers and compatibility strings retain their existing names.
 
-**Por qué:** quien mantiene esto y quien lee los mensajes de error trabaja en
-español. Un `estado: derivada` se entiende sin diccionario.
+**Why:** The repository is published for an English-speaking technical audience, while changing persisted identifiers would require migrations and could break existing deployments.
 
-**Descartado:** traducirlo todo al inglés — y también renombrar las tablas, que
-habría costado una migración por nada.
+**Rejected:** Renaming database tables, columns and enum values as part of a documentation translation. That would add migration risk without product value.
 
 ---
 
-## DEC-10 · Buffer de ráfaga en Redis, salvo en voz
+## DEC-10 · Redis burst buffer, except for voice
 
-**Decidido:** los mensajes que llegan seguidos del mismo remitente se acumulan
-unos segundos antes de procesarse. La voz va sin buffer.
+**Decision:** Consecutive messages from one sender are buffered for a few seconds before processing. Voice messages bypass the buffer.
 
-**Por qué:** la gente escribe en tres mensajes lo que es una sola pregunta.
-Contestar a cada trozo sale caro y queda mal. En voz no aplica: es síncrona.
+**Why:** People often split one question across several messages. Replying to every fragment costs more and feels worse. Voice is synchronous and does not need this behavior.
 
 ---
 
-## DEC-11 · Dos clases de agente, texto y voz, no intercambiables
+## DEC-11 · Two agent kinds, text and voice
 
-**Decidido:** `kind` es `text` o `voice`, y canal y agente tienen que coincidir.
+**Decision:** kind is text or voice, and the channel and agent kind must match.
 
-**Por qué:** un prompt pensado para escribir no sirve al teléfono, donde no hay
-listas ni enlaces y el turno de palabra manda.
-
----
-
-## DEC-12 · El agente interno tiene presupuesto propio
-
-**Decidido:** el agente del operador tiene límite diario y presupuesto separados
-de los agentes que atienden a clientes, y un blindaje fijo contra órdenes
-escondidas en los mensajes que lee.
-
-**Por qué:** lee mensajes de terceros; es superficie de inyección de prompt. Y si
-un operador se pone a preguntarle cosas, no puede consumir el presupuesto que
-atiende a los pacientes.
+**Why:** A writing-oriented prompt does not fit a phone call, where there are no lists or links and turn-taking matters.
 
 ---
 
-## DEC-13 · Búsqueda híbrida en la base de conocimiento
+## DEC-12 · The internal agent has its own budget
 
-**Decidido:** vector (pgvector) **más** texto completo en español —
-`match_chunks_hybrid`.
+**Decision:** The operator agent has separate daily limits and budget from customer-facing agents, plus fixed protection against hidden instructions in messages it reads.
 
-**Por qué:** el vector solo falla con nombres propios, referencias y códigos, que
-es justo lo que pregunta la gente ("¿tenéis el tratamiento X?"). El texto completo
-solo falla con sinónimos.
+**Why:** It reads third-party messages, so it is a prompt-injection surface. An operator asking questions must not consume the budget used to serve patients.
 
 ---
 
-## Pendiente de decidir
+## DEC-13 · Hybrid knowledge-base search
 
-| # | Qué | Dónde |
+**Decision:** Combine pgvector similarity with full-text search using match_chunks_hybrid.
+
+**Why:** Vector search can miss proper names, references and codes. Full-text search can miss synonyms. Combining both covers the two failure modes.
+
+---
+
+## Open decisions
+
+| # | Question | Reference |
 |---|---|---|
-| 1 | ¿El chatbot sustituye o complementa los workflows de n8n? | Decisión 3 del `CLAUDE.md` del paraguas. Bloquea construir dos veces lo mismo |
-| 2 | ¿EasyPanel o adaptar los compose al Caddy propio? | Decisión 2 del paraguas |
+| 1 | Should the chatbot replace or complement the n8n workflows? | Decision 3 in the umbrella CLAUDE.md; building both creates duplicate work |
+| 2 | Should deployment use EasyPanel or adapt the existing Caddy Compose files? | Decision 2 in the umbrella CLAUDE.md |
