@@ -46,7 +46,7 @@ type NavItem = {
   end?: boolean;
 };
 
-const adminHomeNav: NavItem[] = [{ to: "/admin", label: "Inicio", icon: Home, end: true }];
+const adminHomeNav: NavItem[] = [{ to: "/admin", label: "Home", icon: Home, end: true }];
 
 const clientNav: NavItem[] = [
   { to: "/inbox", label: "Inbox", icon: Inbox },
@@ -62,48 +62,48 @@ const clientNav: NavItem[] = [
   //      hace que la entrada aparezca/desaparezca a mitad del render.
   //   3. Ocultarla esconde justo el sitio donde se explica que falta conectar
   //      Retell: quien no lo ha conectado nunca descubriría que existe.
-  { to: "/calls", label: "Llamadas", icon: Phone },
-  { to: "/contacts", label: "Contactos", icon: Users },
+  { to: "/calls", label: "Calls", icon: Phone },
+  { to: "/contacts", label: "Contacts", icon: Users },
 ];
 
 // Menú del OPERADOR (no admin): lo básico + la Base de Conocimiento en
 // lectura (la subida/borrado sigue siendo admin-only dentro de la página).
 const operatorNav: NavItem[] = [
   ...clientNav,
-  { to: "/knowledge-base", label: "Base de Conocimiento", icon: BookOpen },
+  { to: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
 ];
 
 // Operativa para admin = lo del operador + envío masivo.
 const adminOperativaNav: NavItem[] = [
   ...clientNav,
-  { to: "/admin/outbound", label: "Envío masivo", icon: Megaphone },
+  { to: "/admin/outbound", label: "Outbound messaging", icon: Megaphone },
 ];
 
 const adminUsersNav: NavItem[] = [
-  { to: "/admin/users", label: "Usuarios", icon: Users },
-  { to: "/admin/connections", label: "Conexiones", icon: Plug },
+  { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin/connections", label: "Connections", icon: Plug },
   // Bloqueados va justo debajo de Conexiones: se gestiona junto a los canales.
-  { to: "/admin/blocklist", label: "Contactos bloqueados", icon: ShieldOff },
+  { to: "/admin/blocklist", label: "Blocked contacts", icon: ShieldOff },
   // Ajustes generales de la app (zona horaria, etc.).
-  { to: "/admin/settings", label: "Ajustes", icon: Settings },
+  { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 const adminAgentNav: NavItem[] = [
   { to: "/admin/agent/dashboard", label: "Dashboard", icon: BarChart3 },
-  { to: "/admin/agent/flow", label: "Flujo en vivo", icon: Workflow },
+  { to: "/admin/agent/flow", label: "Live flow", icon: Workflow },
   // La antigua "Configuración modelo" es la pestaña "Tarifas y límites"
   // dentro de Agentes (la ruta vieja /admin/agent/config redirige allí).
-  { to: "/admin/agent/agents", label: "Agentes", icon: Bot },
-  { to: "/knowledge-base", label: "Base de Conocimiento", icon: BookOpen },
-  { to: "/admin/agent/learning", label: "Aprendizajes", icon: GraduationCap },
+  { to: "/admin/agent/agents", label: "Agents", icon: Bot },
+  { to: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
+  { to: "/admin/agent/learning", label: "Learning", icon: GraduationCap },
 ];
 
 const adminSystemNav: NavItem[] = [
-  { to: "/admin/system/logs", label: "Logs en vivo", icon: Terminal },
+  { to: "/admin/system/logs", label: "Live logs", icon: Terminal },
   { to: "/admin/audit", label: "Audit log", icon: ScrollText },
-  { to: "/admin/health", label: "Salud del sistema", icon: Activity },
+  { to: "/admin/health", label: "System health", icon: Activity },
   // Copias vive en Sistema (junto a salud/retención), no en Admin.
-  { to: "/admin/backups", label: "Copias de seguridad", icon: DatabaseBackup },
+  { to: "/admin/backups", label: "Backups", icon: DatabaseBackup },
 ];
 
 // Avatar del sidebar — color fijo de la paleta de marca, con las iniciales en
@@ -146,9 +146,8 @@ export function Layout() {
     localStorage.setItem("chatbot:sidebar-collapsed", collapsed ? "1" : "0");
   }, [collapsed]);
 
-  // Badge del Inbox: nº de conversaciones PENDIENTES de una persona (derivadas
-  // a humano + sugerencias/borradores sin resolver + sin contestar) — el mismo
-  // criterio que la pestaña "Pendientes" del inbox. Refresco ligero cada 30s.
+  // Inbox badge: conversations waiting for human attention, using the same
+  // predicate as the inbox's pending tab. Refresh lightly every 30 seconds.
   useEffect(() => {
     let alive = true;
     async function load() {
@@ -167,12 +166,12 @@ export function Layout() {
     };
   }, []);
 
-  // Cierra el drawer al cambiar de ruta.
+  // Close the drawer when the route changes.
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  // Bloquea scroll del body cuando el drawer está abierto.
+  // Lock body scrolling while the drawer is open.
   useEffect(() => {
     if (mobileOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
@@ -208,7 +207,7 @@ export function Layout() {
 
   return (
     <div className="flex h-full bg-paper text-ink">
-      {/* Backdrop móvil */}
+      {/* Mobile backdrop */}
       {mobileOpen && (
         <div
           className="lg:hidden fixed inset-0 z-40 bg-ink/40 backdrop-blur-[1px]"
@@ -256,7 +255,7 @@ export function Layout() {
           </div>
           <button
             type="button"
-            aria-label="Cerrar menú"
+            aria-label="Close menu"
             onClick={() => setMobileOpen(false)}
             className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-coro-sm hover:bg-paper3"
           >
@@ -264,8 +263,8 @@ export function Layout() {
           </button>
           <button
             type="button"
-            aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
-            title={collapsed ? "Expandir menú" : "Colapsar menú"}
+            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            title={collapsed ? "Expand menu" : "Collapse menu"}
             onClick={() => setCollapsed((c) => !c)}
             className="hidden lg:inline-flex items-center justify-center w-9 h-9 rounded-coro-sm hover:bg-paper3 text-ink2 shrink-0"
           >
@@ -335,7 +334,7 @@ export function Layout() {
         <div className="pt-3 mt-3 border-t border-line space-y-2">
           <NavLink
             to="/profile"
-            title="Mi perfil"
+            title="My profile"
             className={clsx("flex items-center gap-2.5 min-w-0 rounded-lg p-1 -m-1 hover:bg-paper3", collapsed && "lg:justify-center")}
           >
             <div
@@ -368,8 +367,8 @@ export function Layout() {
             <button
               type="button"
               aria-pressed={privacy}
-              aria-label={privacy ? "Desactivar modo privacidad" : "Activar modo privacidad (ocultar datos de clientes)"}
-              title={privacy ? "Modo privacidad ACTIVO — datos de clientes ocultos" : "Modo privacidad — ocultar datos de clientes al compartir pantalla"}
+              aria-label={privacy ? "Disable privacy mode" : "Enable privacy mode (hide customer data)"}
+              title={privacy ? "Privacy mode ACTIVE — customer data hidden" : "Privacy mode — hide customer data while sharing your screen"}
               onClick={togglePrivacy}
               className={clsx(
                 "inline-flex items-center justify-center w-8 h-8 rounded-coro-sm shrink-0 transition-colors",
@@ -380,8 +379,8 @@ export function Layout() {
             </button>
             <button
               type="button"
-              aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-              title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               onClick={toggleTheme}
               className="inline-flex items-center justify-center w-8 h-8 rounded-coro-sm hover:bg-paper3 text-ink2 shrink-0 transition-colors"
             >
@@ -393,8 +392,8 @@ export function Layout() {
             </button>
             <button
               type="button"
-              aria-label="Cerrar sesión"
-              title="Cerrar sesión"
+              aria-label="Sign out"
+              title="Sign out"
               onClick={onLogout}
               className="inline-flex items-center justify-center w-8 h-8 rounded-coro-sm hover:bg-paper3 text-ink2 shrink-0 transition-colors"
             >
@@ -406,7 +405,7 @@ export function Layout() {
 
       {/* Columna de contenido: cabecera móvil + main */}
       <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
-        {/* Cabecera móvil: marca a la izquierda, menú a la derecha (no se pisan) */}
+        {/* Mobile header: brand on the left, menu on the right. */}
         <header className="lg:hidden flex items-center justify-between gap-3 shrink-0 px-4 py-2.5 border-b border-line bg-paper">
           <div className="flex items-center gap-2.5 min-w-0">
             <BrandLogo className="w-6 h-6 shrink-0 text-ink" />
@@ -419,7 +418,7 @@ export function Layout() {
           </div>
           <button
             type="button"
-            aria-label="Abrir menú"
+            aria-label="Open menu"
             onClick={() => setMobileOpen(true)}
             className="inline-flex items-center justify-center w-10 h-10 rounded-coro-sm hover:bg-paper3 shrink-0"
           >
@@ -433,21 +432,20 @@ export function Layout() {
         </main>
       </div>
 
-      {/* Indicador del modo privacidad: inconfundible durante un directo y
-          clicable para desactivarlo. Esquina inferior izquierda para no chocar
-          con el agente interno (inferior derecha). */}
+      {/* Privacy indicator: visible during screen sharing and clickable to
+          disable. It stays bottom-left to avoid the internal agent widget. */}
       {privacy && (
         <button
           type="button"
           onClick={togglePrivacy}
-          title="Modo privacidad activo — clic para desactivar"
+          title="Privacy mode active — click to disable"
           className="fixed bottom-3 left-3 z-30 inline-flex items-center gap-1.5 rounded-full bg-brand text-brand-on shadow-coro-1 text-[11px] font-semibold px-3 py-1.5"
         >
-          <EyeOff className="w-3.5 h-3.5" /> Modo privacidad
+          <EyeOff className="w-3.5 h-3.5" /> Privacy mode
         </button>
       )}
 
-      {/* Agente interno: chat flotante read-only solo para admin. */}
+      {/* Internal agent: read-only floating chat for admins. */}
       {user?.role === "admin" && <InternalAgentWidget />}
     </div>
   );

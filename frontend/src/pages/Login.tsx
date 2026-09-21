@@ -7,17 +7,16 @@ import { apiBaseHttp } from "@/services/api";
 import { appName } from "@/lib/appName";
 import { BrandLogo } from "@/components/BrandLogo";
 
-// Mensajes para los errores que el backend devuelve en el fragmento al volver
-// del login con Google (#google_error=...).
+// Messages returned by the backend in the Google login fragment.
 const GOOGLE_ERRORS: Record<string, string> = {
   google_no_user:
     "Tu cuenta de Google no está dada de alta en el panel. Pide a un administrador que cree tu usuario con ese correo.",
-  google_unverified: "Tu correo de Google no está verificado.",
-  google_not_configured: "El acceso con Google todavía no está configurado.",
-  google_denied: "Se canceló el acceso con Google.",
-  google_state: "La sesión de Google caducó. Inténtalo de nuevo.",
-  google_exchange: "No se pudo validar tu cuenta de Google. Inténtalo de nuevo.",
-  google_bad_request: "No se pudo completar el acceso con Google.",
+  google_unverified: "Your Google email is not verified.",
+  google_not_configured: "Google sign-in is not configured yet.",
+  google_denied: "Google sign-in was cancelled.",
+  google_state: "Your Google session expired. Try again.",
+  google_exchange: "Your Google account could not be verified. Try again.",
+  google_bad_request: "Google sign-in could not be completed.",
 };
 
 // Pequenias burbujas de conversacion que flotan en el fondo del login para
