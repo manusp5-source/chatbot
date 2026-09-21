@@ -1,21 +1,16 @@
-# Despliegue
+# Deployment
 
-La guía de despliegue es **[`DEPLOY_EASYPANEL.md`](../DEPLOY_EASYPANEL.md)**, en la raíz del
-repositorio. No hay ninguna otra.
+The deployment guide is [`DEPLOY_EASYPANEL.md`](../DEPLOY_EASYPANEL.md) in the repository root. It is the only deployment guide.
 
-Esta carpeta no contiene ficheros de despliegue. Están en su sitio:
+This directory contains no deployment files. They live here:
 
-| Qué | Dónde |
+| Item | Location |
 |---|---|
-| Compose de producción | `docker-compose.easypanel.yml` (raíz) |
-| Compose de desarrollo local | `docker-compose.yml` (raíz) |
-| Variables de producción | `.env.example` (raíz) |
-| Imágenes | `backend/Dockerfile`, `frontend/Dockerfile`, `mcp-server/Dockerfile` |
-| nginx del panel | `frontend/nginx.conf` |
-| Migraciones y seed | los ejecuta solo `backend/entrypoint.sh` al arrancar |
+| Production Compose file | `docker-compose.easypanel.yml` (root) |
+| Local development Compose file | `docker-compose.yml` (root) |
+| Production variables | `.env.example` (root) |
+| Images | `backend/Dockerfile`, `frontend/Dockerfile`, `mcp-server/Dockerfile` |
+| Panel nginx | `frontend/nginx.conf` |
+| Migrations and seed data | Run only by `backend/entrypoint.sh` at startup |
 
-> **No despliegues con `docker-compose.yml` ni con `.env.desarrollo.example`.** Son los de
-> desarrollo local: traen `APP_ENV=development`, que desactiva las comprobaciones
-> de arranque y deja pasar el usuario administrador de ejemplo que está escrito
-> en este mismo repositorio. Producción va con `docker-compose.easypanel.yml` y
-> `.env.example`.
+> **Do not deploy with `docker-compose.yml` or `.env.desarrollo.example`.** They are for local development: they set `APP_ENV=development`, which disables startup checks and allows the example administrator credentials stored in this repository. Production uses `docker-compose.easypanel.yml` and `.env.example`.

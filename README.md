@@ -1,171 +1,135 @@
-# Chatbot
+# Multichannel Clinic Support Platform
 
-App de atención al cliente con agente IA por WhatsApp, Instagram DM, correo, chat web y voz. Trae base de conocimiento propia (RAG), CRM nativo, inbox tipo WhatsApp Web con derivación a humano y envíos masivos. Producto reutilizable de un cliente por instalación: se clona, se configura por cliente y se despliega.
+Customer support application with an AI agent for WhatsApp, Instagram Direct Messages, email, web chat and voice. It includes a built-in knowledge base with RAG, native CRM, a WhatsApp Web-style inbox with human handoff, and outbound messaging. Each deployment belongs to one customer: clone the repository, configure it for that customer, and deploy it on the customer's server.
 
-> **Antes de desplegar a producción:** lee [`SECURITY.md`](./SECURITY.md). Resume las defensas activas, el modelo de confianza y el checklist obligatorio.
+> **Before production deployment:** read [SECURITY.md](./SECURITY.md). It documents active defenses, the trust model and the mandatory checklist.
 
-## Para qué sirve
+## What it does
 
-Atención al cliente completa: consultas, información de servicios, audios, derivación a una persona del equipo y agenda de citas por Google Calendar. Sirve para cualquier negocio que atienda por mensajes; el prompt del agente y la base de conocimiento son los que lo hacen tuyo.
+The platform handles customer questions, service information, audio messages, human handoff and Google Calendar appointment scheduling. It fits any business that serves customers through messaging channels. The agent prompt and knowledge base provide the business-specific behavior.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U[Customers] --> CH[WhatsApp · Instagram · Email · Web chat · Voice]
+    CH --> API[FastAPI backend]
+    API --> ORCH[Agent orchestrator]
+    ORCH --> LLM[LLM providers\nOpenAI · Anthropic · Gemini]
+    ORCH --> KB[Knowledge base\nPostgreSQL + pgvector]
+    ORCH --> CRM[Contacts and conversations\nPostgreSQL]
+    ORCH --> EXT[External services\nCalendar · WhatsApp · Gmail · Retell]
+    API --> REDIS[Redis]
+    REDIS --> CELERY[Celery worker and scheduler]
+    API <--> WS[WebSocket event stream]
+    WS --> UI[React admin and operator panels]
+    API --> MCP[MCP server]
+    MCP --> A[External assistants and automation]
+    API --> PUSH[Web Push]
+    UI --> PUSH
+```
+
+The backend owns authentication, channel webhooks, agent execution, CRM data, knowledge retrieval, encrypted credentials and audit events. Redis carries queues and transient state. Celery handles background work such as indexing, outbound delivery and scheduled jobs. PostgreSQL stores application data and vector embeddings. The React frontend uses the API and WebSocket stream for the operator inbox. Docker Compose runs the complete stack.
 
 ## Stack
 
-- **Backend:** Python 3.12 + FastAPI + Celery + Redis
-- **Base de datos:** PostgreSQL 16 + pgvector (memoria conversacional, CRM, RAG)
-- **LLM:** OpenAI, Anthropic o Gemini, detrás de la interfaz `LLMProvider`. Se elige en el panel
+- **Backend:** Python 3.12, FastAPI, Celery and Redis
+- **Database:** PostgreSQL 16 with pgvector for conversation memory, CRM data and RAG
+- **LLMs:** OpenAI, Anthropic or Gemini behind the `LLMProvider` interface; selected from the admin panel
 - **Embeddings:** OpenAI `text-embedding-3-small`
-- **Transcripción de audio:** OpenAI Whisper
-- **WhatsApp:** YCloud o Meta directamente, detrás de `WhatsAppProvider`
-- **Otros canales:** Instagram DM (Meta), voz (Retell), correo (Gmail o SMTP), chat web
-- **Correo saliente:** Resend o SMTP
-- **Avisos al operador:** web push a la PWA y el registro en vivo del panel. No hay integración con Telegram ni con Slack
-- **Frontend:** React + TypeScript (panel de administración y panel de trabajo, con inbox en tiempo real por WebSocket)
-- **Despliegue:** Docker → EasyPanel
+- **Audio transcription:** OpenAI Whisper
+- **WhatsApp:** YCloud or Meta directly behind `WhatsAppProvider`
+- **Other channels:** Instagram Direct Messages, Retell voice, Gmail or SMTP email, and web chat
+- **Outbound email:** Resend or SMTP
+- **Operator alerts:** Web Push and the live panel event log; no Telegram or Slack integration
+- **Frontend:** React and TypeScript with real-time WebSocket inbox
+- **Deployment:** Docker and EasyPanel
 
-## Estructura
+## Repository structure
 
-| Ruta | Contenido |
+| Path | Contents |
 |---|---|
-| `CLAUDE.md` | Manual de trabajo: stack, entorno, pruebas, migraciones y convenciones. **Empieza por aquí.** |
-| `SECURITY.md` | Defensas activas, modelo de confianza y checklist previo a producción |
-| `DEPLOY_EASYPANEL.md` | Guía de instalación en el servidor del cliente |
-| `backend/` | Código Python: API, agente, tareas y modelo de datos |
-| `backend/tests/` | Las pruebas automáticas (pytest) |
-| `backend/app/db/migrations/versions/` | Las migraciones de base de datos |
-| `frontend/` | Código React del panel |
-| `mcp-server/` | Servidor MCP que expone la agent-api a asistentes externos |
-| `design/` | Documentación de diseño: resumen, modelo de datos, API, pantallas |
-| `deployment/` | Remite a la guía de despliegue; no contiene ficheros propios |
-| `scripts/smoke.sh` | Comprobación rápida de un despliegue |
-| `.claude/commands/` | Comandos de Claude Code de este proyecto |
-| `docker-compose.yml` · `.env.desarrollo.example` | Desarrollo local |
-| `.env.example` | Las 12 variables del despliegue (es lo que importa EasyPanel) |
-| `docker-compose.easypanel.yml` | Producción |
+| `CLAUDE.md` | Working manual: stack, environment, tests, migrations and conventions. **Start here.** |
+| `SECURITY.md` | Active defenses, trust model and pre-production checklist |
+| `ARCHITECTURE.md` | System context, runtime responsibilities and message flow diagrams |
+| `DEPLOY_EASYPANEL.md` | Installation guide for the customer's server |
+| `backend/` | Python API, agent, background tasks and data models |
+| `backend/tests/` | Automated pytest suite |
+| `backend/app/db/migrations/versions/` | Database migrations |
+| `frontend/` | React admin and operator panels |
+| `mcp-server/` | MCP server exposing the agent API to external assistants |
+| `design/` | Design summary, data model, API contract and screens |
+| `deployment/` | Pointer to the deployment guide |
+| `scripts/smoke.sh` | Deployment smoke check |
+| `.claude/commands/` | Project-specific Claude Code commands |
+| `docker-compose.yml` and `.env.desarrollo.example` | Local development |
+| `.env.example` | Deployment variables used by EasyPanel |
+| `docker-compose.easypanel.yml` | Production stack |
 
-## Quick start (desarrollo local)
+## Quick start: local development
 
 ```bash
-# 1. Generar secrets locales (o copia .env.desarrollo.example y edítalo)
+# 1. Create a local environment file
 cp .env.desarrollo.example .env
 
-# 2. Generar las claves obligatorias (en el .env)
-#    Son los MISMOS comandos que usa DEPLOY_EASYPANEL.md § 0: no hay dos formas
-#    de generar la clave de cifrado, solo esta.
-openssl rand -hex 24                  # → POSTGRES_PASSWORD (hex, no base64)
-openssl rand -base64 48               # → JWT_SECRET
-python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"   # → ENCRYPTION_KEY
+# 2. Generate required secrets in .env
+openssl rand -hex 24                  # -> POSTGRES_PASSWORD
+openssl rand -base64 48               # -> JWT_SECRET
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"   # -> ENCRYPTION_KEY
 
-# 3. Levantar todo (postgres + redis + app + worker + beat + panel + servidor MCP)
+# 3. Start the full stack
 docker compose up -d
 
-# 4. Comprobar (espera ~30s a que arranque)
+# 4. Check the services after roughly 30 seconds
 curl http://localhost:8000/health
-# → {"status":"ok","db":"ok","redis":"ok","worker":"ok","worker_last_seen_seconds":12}
-open http://localhost:5173            # → panel de login
+# -> {"status":"ok","db":"ok","redis":"ok","worker":"ok","worker_last_seen_seconds":12}
+open http://localhost:5173            # -> login panel
 ```
 
-> **Sobre el campo `worker` de `/health`:** dice si el worker de tareas sigue
-> vivo, pero **no** cambia el código de respuesta: aunque ponga `caido`, la
-> respuesta sigue siendo 200. Es a propósito — ese endpoint es el latido del
-> contenedor de la API, y reiniciar la API no resucita al worker. Valores:
-> `ok`, `caido` (lleva más de 15 min sin dar señales), `sin_latido` (aún no ha
-> dado ninguna: normal el primer par de minutos tras desplegar) y
-> `desconocido` (Redis caído, así que no hay forma de saberlo).
+Use the values configured in `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` in `.env` to sign in.
 
-Credenciales iniciales: las que hayas puesto en `INITIAL_ADMIN_EMAIL` e
-`INITIAL_ADMIN_PASSWORD` de tu `.env`.
+Configure real provider credentials at `/admin/connections`, then copy the webhook URLs shown on each channel card into the provider dashboard. Next, open `/admin/agent/agents` and complete the prompts for the two agents created during installation. Their behavior rules are ready, but business-specific values use `[[ RELLENAR: ... ]]` markers. Complete every marker before enabling a channel.
 
-En `/admin/connections` configura las claves API reales (YCloud, OpenAI…) y copia al panel de cada proveedor las URLs de webhook que verás en la tarjeta de su canal. Ese es el primer paso después del login.
+## End-to-end verification
 
-El segundo: en `/admin/agent/agents`, **rellenar el prompt de los dos agentes que siembra la instalación** (Agente de Texto y Agente de Voz). Vienen con una plantilla —las reglas de comportamiento están escritas y funcionan— pero los datos del negocio van marcados con `[[ RELLENAR: … ]]` y hay que completarlos antes de abrir ningún canal. El checklist de Inicio lo recuerda hasta que no quede ni un marcador en ningún agente activo.
-
-## Verificación end-to-end (Fase 1)
-
-| # | Check | Cómo |
+| # | Check | How |
 |---|---|---|
-| 1 | Despliegue limpio | `docker compose up` arranca todos los servicios sin errores |
-| 2 | Migraciones | Tablas creadas + función `match_chunks` + seed admin/prompt/tags |
-| 3 | Login | Email + password → JWT → panel |
-| 4 | Inbox tiempo real | Abrir dos pestañas; cambios se reflejan vía WebSocket |
-| 5 | KB | Subir PDF → indexar → buscar → ver chunks |
-| 6 | Webhook YCloud | POST a `/api/v1/webhooks/ycloud` con payload de prueba |
-| 7 | Agente | Mensaje real → bot responde con tool use (RAG + CRM) |
-| 8 | Derivación humana | Bot llama `derivar_humano` → status `humano` + aviso por web push y en el registro del panel |
-| 9 | Audio | Mensaje voz WhatsApp → transcrito y procesado |
-| 10 | Operador responde | Caja respuesta en inbox → llega a WhatsApp del usuario |
-| 11 | Ventana 24h | Mensaje fuera de ventana → UI bloquea con aviso |
-| 12 | Tests | Los ejecuta sola la revisión automática en cada cambio (ver abajo). La imagen de producción NO trae pytest dentro: para lanzarlos a mano, `pip install -r backend/requirements-dev.txt` en un entorno virtual y `pytest -q` desde `backend/` |
+| 1 | Clean deployment | `docker compose up` starts every service without errors |
+| 2 | Migrations | Tables, `match_chunks`, admin seed, prompt seed and tags are created |
+| 3 | Login | Email and password produce a JWT and open the panel |
+| 4 | Real-time inbox | Changes in one browser tab appear in a second tab through WebSocket |
+| 5 | Knowledge base | Upload PDF, index it, search it and inspect chunks |
+| 6 | YCloud webhook | POST a test payload to `/api/v1/webhooks/ycloud` |
+| 7 | Agent | A real message receives a tool-using response with RAG and CRM access |
+| 8 | Human handoff | `derivar_humano` changes status to `humano` and sends panel/Web Push alerts |
+| 9 | Audio | WhatsApp voice message is transcribed and processed |
+| 10 | Operator response | Inbox reply reaches the WhatsApp user |
+| 11 | 24-hour window | UI blocks messages outside the allowed window |
+| 12 | Tests | Install `backend/requirements-dev.txt` and run `pytest -q` from `backend/` |
 
-## Revisión automática (CI)
+## Continuous integration
 
-Cada cambio que se sube a GitHub pasa por `.github/workflows/ci.yml`: las más de
-1.100 pruebas del backend contra una base de datos real, las migraciones en los
-dos sentidos (subir y deshacer), el build y los tipos del panel, y la
-construcción de las tres imágenes Docker (backend, panel y servidor MCP). El
-linter (`ruff`) se ejecuta en modo informativo:
-sale en el informe pero no bloquea, porque el repositorio arrastra más de 600
-avisos y ponerlo a bloquear dejaría la revisión en rojo permanente.
+Every GitHub push runs `.github/workflows/ci.yml`: the backend test suite against a real database, migrations in both directions, frontend build and type checks, and Docker builds for the backend, frontend and MCP server. Ruff runs in informational mode because the repository still contains legacy warnings; it reports them without blocking the workflow.
 
-> **Que la revisión esté en verde no impide desplegar algo roto por sí solo.**
-> Hacen falta dos ajustes manuales —protección de la rama en GitHub y apagar el
-> auto-despliegue en EasyPanel— explicados paso a paso en
-> [`DEPLOY_EASYPANEL.md` § 7.b](./DEPLOY_EASYPANEL.md).
+A green workflow does not prove that a deployment is safe by itself. Configure GitHub branch protection and disable EasyPanel auto-deployment as described in [DEPLOY_EASYPANEL.md](./DEPLOY_EASYPANEL.md).
 
-## Trabajar en el código con Claude Code
+## Working on the code
 
-Abre esta carpeta con Claude Code. Lee `CLAUDE.md` solo: ahí está el mapa de
-carpetas, cómo levantar el entorno, cómo pasar las pruebas, cómo crear una
-migración y las convenciones del proyecto.
+Open this directory with Claude Code and read `CLAUDE.md`. It contains the folder map, environment setup, test commands, migration workflow and project conventions.
 
-Hay tres comandos propios en `.claude/commands/`:
-
-| Comando | Cuándo |
+| Command | Use |
 |---|---|
-| `/session-start` | Al empezar a trabajar: reconstruye el contexto y dice por dónde ibas |
-| `/iterate` | Para hacer un cambio: arreglo, mejora o función nueva, de punta a punta |
-| `/review` | Al terminar un cambio: revisión independiente antes de darlo por bueno |
+| `/session-start` | Rebuild context at the start of a work session |
+| `/iterate` | Implement a change from diagnosis through verification |
+| `/review` | Run an independent review before accepting a change |
 
-Los tres escriben el avance en `docs/bitacora.md`, que crean ellos mismos la
-primera vez.
+## Deployment model
 
-## Distribución del producto
+Each customer receives an isolated instance on its own server. There is no shared central infrastructure.
 
-Cada cliente recibe su propia instancia en su propio servidor. No hay
-infraestructura central compartida.
+1. Clone the repository on the customer's VPS.
+2. Copy `.env.example` to `.env` and fill in the deployment variables.
+3. Deploy with `docker-compose.easypanel.yml`, never the local-development compose file.
+4. Upload the customer's documentation to the Knowledge Base through the panel.
 
-> **La guía de instalación es [`DEPLOY_EASYPANEL.md`](DEPLOY_EASYPANEL.md), y se
-> sigue entera.** Estos cuatro puntos son el mapa, no el manual.
-
-1. Clonar el repositorio en el VPS del cliente.
-2. `cp .env.example .env` y rellenarlo: son las 12 variables del despliegue.
-   Si quieres ver TODAS las opcionales con su valor por defecto, mira el anexo
-   de `DEPLOY_EASYPANEL.md`. **No** uses `.env.desarrollo.example`: ese es
-   para local y trae `APP_ENV=development`, que apaga todas las
-   comprobaciones de arranque (ver más abajo).
-3. Desplegar con **`docker-compose.easypanel.yml`**, no con `docker-compose.yml`.
-   El de EasyPanel fija `APP_ENV=production` y exige las variables obligatorias
-   con `${VAR:?}`: si falta alguna, el despliegue para y dice cuál.
-4. Cargar la documentación del cliente en la Base de Conocimiento desde el panel.
-
-### Por qué importa no equivocarse de fichero
-
-Con `APP_ENV=development`, que es lo que trae `.env.desarrollo.example`:
-
-- **La sesión se cae sola.** Si `JWT_SECRET` sigue siendo el de fábrica, cada
-  proceso genera uno aleatorio: en cuanto el contenedor se reinicia, a todo el
-  mundo lo echa del panel sin explicación.
-- **No hay red de seguridad contra los secretos de juguete.** En producción,
-  `validate_production()` (`backend/app/core/config.py`) aborta el arranque si
-  quedan el `JWT_SECRET` por defecto, el admin de ejemplo o URLs a localhost.
-  Fuera de producción no comprueba nada, así que una instalación abierta a
-  internet puede quedarse con el usuario y la contraseña de ejemplo, que están
-  escritos en este mismo repositorio.
-- **El panel no habla con la API.** El `CORS_ALLOWED_ORIGINS` de ejemplo apunta
-  a localhost, y el compose de desarrollo publica los puertos sin SSL.
-
-## Licencia
-
-Puedes usar esta aplicación en tu negocio y montarla para clientes tuyos, sin
-límite. Lo que no puedes hacer es compartir, publicar ni vender el código ni el
-paquete descargable a nadie. Las condiciones completas están en
-[LICENCIA.md](LICENCIA.md).
+`APP_ENV=production` enables startup validation. The production configuration rejects default JWT secrets, example admin credentials and localhost URLs. The development compose file publishes ports without TLS and is unsuitable for an internet-facing deployment.
