@@ -161,7 +161,11 @@ async def _ejecutar_drain(*, canal, respuesta, previos=(), entrenamiento=False):
         resultados_envio.append(_Resultado(escalar=mensaje_real_previo))
     sesion_envio = _SesionFalsa(resultados_envio)
 
-    entrega = AsyncMock(return_value=1)
+    entrega = AsyncMock(
+        side_effect=lambda *args, **_kwargs: sum(
+            bool(parte.strip()) for parte in args[2]
+        )
+    )
     borrador_email = AsyncMock(
         return_value={"draft_id": "draft-1", "message_id": "gmail-1"}
     )
