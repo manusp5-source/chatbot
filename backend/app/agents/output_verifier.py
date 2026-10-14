@@ -33,18 +33,27 @@ TEXTO_IMPORTE_NO_RESPALDADO_SIN_DERIVAR = (
     "para confirmártelo."
 )
 
-# Un número a la española: «1.200», «1.200,50», «49,90», «1200».
-_NUM = r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?"
-_IMPORTE_DETRAS = re.compile(rf"(?P<n>{_NUM})\s*(?:€|euros?\b|eur\b)", re.IGNORECASE)
-_IMPORTE_DELANTE = re.compile(rf"€\s*(?P<n>{_NUM})")
+# Un número a la española: «1.200», «1 200», «1.200,50», «49,90», «1200».
+_NUM = r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d{1,3}(?:[  ]\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?"
+_MONEDA_DETRAS = r"\s*(?:€|euros?\b|eur\b)"
+_IMPORTE_DETRAS = re.compile(rf"(?P<n>{_NUM}){_MONEDA_DETRAS}", re.IGNORECASE)
+# Delante solo «€» y «EUR»: con «euros» delante, «60 euros 30 minutos» leería un 30 como precio.
+_IMPORTE_DELANTE = re.compile(rf"(?:€|\bEUR\b)\s*(?P<n>{_NUM})", re.IGNORECASE)
+# «100-200 €», «de 100 a 200 €», «entre 100 y 200 euros»: el límite inferior también es un precio.
+_RANGO = re.compile(
+    rf"(?P<a>{_NUM})\s*(?:-|–|—|\ba\b|\by\b)\s*(?P<b>{_NUM}){_MONEDA_DETRAS}", re.IGNORECASE
+)
 _CUALQUIER_NUMERO = re.compile(_NUM)
-_MILES = re.compile(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?")
+_MILES_PUNTO = re.compile(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?")
+_MILES_ESPACIO = re.compile(r"\d{1,3}(?:[  ]\d{3})+(?:,\d+)?")
 
 
 def _normalizar(token: str) -> Decimal | None:
-    """'1.200,50' → 1200.50 · '49,90' → 49.90 · '1200' → 1200. None si no es un número."""
-    if _MILES.fullmatch(token):
+    """'1.200,50' → 1200.50 · '1 200' → 1200 · '49,90' → 49.90 · '1200' → 1200."""
+    if _MILES_PUNTO.fullmatch(token):
         token = token.replace(".", "").replace(",", ".")
+    elif _MILES_ESPACIO.fullmatch(token):
+        token = token.replace(" ", "").replace(" ", "").replace(",", ".")
     else:
         token = token.replace(",", ".")
     try:
@@ -56,11 +65,16 @@ def _normalizar(token: str) -> Decimal | None:
 def extraer_importes(texto: str) -> set[Decimal]:
     """Importes en euros que aparecen en el texto. Un número sin € no cuenta."""
     encontrados: set[Decimal] = set()
-    for patron in (_IMPORTE_DETRAS, _IMPORTE_DELANTE):
+    for patron, grupos in (
+        (_IMPORTE_DETRAS, ("n",)),
+        (_IMPORTE_DELANTE, ("n",)),
+        (_RANGO, ("a", "b")),
+    ):
         for m in patron.finditer(texto or ""):
-            valor = _normalizar(m.group("n"))
-            if valor is not None:
-                encontrados.add(valor)
+            for grupo in grupos:
+                valor = _normalizar(m.group(grupo))
+                if valor is not None:
+                    encontrados.add(valor)
     return encontrados
 
 
@@ -75,8 +89,26 @@ def _numeros(texto: str) -> set[Decimal]:
 
 
 def importes_no_respaldados(respuesta: str, evidencia: str) -> set[Decimal]:
-    """Importes de la respuesta que no aparecen en la evidencia."""
+    """Importes de la respuesta que no aparecen en la evidencia (cualquier número cuenta)."""
+    return importes_no_respaldados_en(respuesta, con_moneda=evidencia, numeros_sueltos=evidencia)
+
+
+def importes_no_respaldados_en(
+    respuesta: str, *, con_moneda: str, numeros_sueltos: str
+) -> set[Decimal]:
+    """Importes de la respuesta sin respaldo, con dos grados de evidencia.
+
+    `con_moneda`: textos donde solo vale un importe escrito como importe (prompt del negocio,
+    respuestas ya dadas, instrucciones del equipo). Un número desnudo ahí no respalda nada:
+    el prompt lleva horarios y teléfonos, y la fecha antepone el día del mes, así que si
+    contara cualquier número, cualquier precio entre 1 y 31 € quedaría respaldado.
+
+    `numeros_sueltos`: contenido de la base de conocimiento, donde una tabla trae «Limpieza,60»
+    sin símbolo. Ahí sí vale un número desnudo (límite asumido: un número coincidente en un
+    documento largo puede respaldar un importe inventado).
+    """
     importes = extraer_importes(respuesta)
     if not importes:
         return set()
-    return importes - _numeros(evidencia)
+    respaldo = extraer_importes(con_moneda) | _numeros(numeros_sueltos)
+    return importes - respaldo

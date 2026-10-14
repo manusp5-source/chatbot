@@ -15,7 +15,7 @@ from app.agents.guardarrail_clinico_llm import sospecha_clinica
 from app.agents.output_verifier import (
     TEXTO_IMPORTE_NO_RESPALDADO,
     TEXTO_IMPORTE_NO_RESPALDADO_SIN_DERIVAR,
-    importes_no_respaldados,
+    importes_no_respaldados_en,
 )
 from app.agents.tools import ALL_TOOLS
 from app.core.config import settings
@@ -88,8 +88,12 @@ async def run_agent(
     llm_provider_id: "uuid.UUID | None" = None,
     fallback_provider_id: "uuid.UUID | None" = None,
     fallback_model: "str | None" = None,
+    evidencia_extra: str | None = None,
 ) -> str:
     """Devuelve la respuesta final del agente (texto).
+
+    `evidencia_extra`: texto cuyos importes el verificador debe dar por buenos. Solo lo usa
+    «Corregir borrador», donde es el equipo quien dicta el importe y lo confirma.
 
     `tools_enabled`: lista blanca de nombres de tool que el agente puede usar.
     None = SIN CONFIGURAR → todas las tools registradas (legacy). Lista vacía =
@@ -111,6 +115,8 @@ async def run_agent(
     ]
     messages.extend(history)
     messages.append(LLMMessage(role="user", content=user_message))
+    # Lo que se añade a partir de aquí es de ESTE turno (respuestas del modelo y de las tools).
+    inicio_del_turno = len(messages)
 
     ctx = context or {}
     # Setea el conversation_id para que los módulos profundos (LLM client,
@@ -172,7 +178,12 @@ async def run_agent(
                 continue
 
             return await _verificar_importes(
-                (completion.content or "").strip(), messages, allowed
+                (completion.content or "").strip(),
+                system_prompt=system_prompt,
+                history=history,
+                resultados=messages[inicio_del_turno:],
+                evidencia_extra=evidencia_extra,
+                allowed=allowed,
             )
 
         logger.warning("agent.max_iterations_reached")
@@ -189,19 +200,67 @@ async def run_agent(
             reset_agent_id(agent_token)
 
 
-async def _verificar_importes(
-    respuesta: str, messages: list[LLMMessage], allowed: set[str]
-) -> str:
-    """Sustituye la respuesta si cita un importe que el modelo no tenía delante.
+def _evidencia_de_importes(
+    *,
+    system_prompt: str,
+    history: list[LLMMessage],
+    resultados: list[LLMMessage],
+    evidencia_extra: str | None,
+) -> tuple[str, str]:
+    """(con_moneda, numeros_sueltos): qué textos pueden respaldar un importe y con qué rigor.
 
-    La evidencia es TODO el contexto de este turno: prompt, historial, mensaje del
-    cliente y resultados de las tools. Incluir el historial es deliberado: un precio
-    dicho antes (y ya verificado entonces) puede repetirse sin volver a la KB.
+    Cuentan: el prompt del NEGOCIO (sin la línea de fecha que antepone `run_agent`), lo que el
+    agente ya dijo en turnos anteriores (se verificó entonces), la instrucción del equipo al
+    corregir un borrador y los resultados de las tools de ESTE turno.
 
-    Fail-closed: ver `app.agents.output_verifier` para el porqué y los límites.
+    NO cuentan, a propósito: lo que escribe el cliente (si dice «me dijeron 300 €», el agente
+    no puede confirmarlo por eco) ni el texto que el propio modelo escribe junto a una llamada
+    a una tool («creo que son 350 €»): sería citarse a sí mismo.
     """
-    evidencia = "\n".join(m.content for m in messages if m.content)
-    sin_respaldo = importes_no_respaldados(respuesta, evidencia)
+    previas = [m.content for m in history if m.role == "assistant" and m.content]
+    texto_tools = [m.content for m in resultados if m.role == "tool" and m.content]
+    kb = [
+        _contenido_de_kb(m.content)
+        for m in resultados
+        if m.role == "tool" and m.name == "consultar_kb" and m.content
+    ]
+    con_moneda = "\n".join([system_prompt or "", *previas, evidencia_extra or "", *texto_tools])
+    return con_moneda, "\n".join(kb)
+
+
+def _contenido_de_kb(resultado: str) -> str:
+    """Solo el texto de los fragmentos: sin ids ni puntuaciones, cuyos dígitos darían falsos
+    respaldos."""
+    try:
+        datos = json.loads(resultado)
+        return "\n".join(str(r.get("contenido", "")) for r in datos.get("results", []))
+    except (ValueError, AttributeError, TypeError):
+        return ""
+
+
+async def _verificar_importes(
+    respuesta: str,
+    *,
+    system_prompt: str,
+    history: list[LLMMessage],
+    resultados: list[LLMMessage],
+    evidencia_extra: str | None,
+    allowed: set[str],
+) -> str:
+    """Sustituye la respuesta si cita un importe sin respaldo en la evidencia permitida.
+
+    Fail-closed: ver `app.agents.output_verifier` para el porqué y los límites, y
+    `_evidencia_de_importes` para qué cuenta como evidencia.
+    """
+    con_moneda, sueltos = _evidencia_de_importes(
+        system_prompt=system_prompt,
+        history=history,
+        resultados=resultados,
+        evidencia_extra=evidencia_extra,
+    )
+    sin_respaldo = importes_no_respaldados_en(
+        respuesta, con_moneda=con_moneda, numeros_sueltos=sueltos
+    )
     if not sin_respaldo:
         return respuesta
 

@@ -1725,6 +1725,8 @@ async def refine_draft(
             llm_provider_id=agent_cfg.llm_provider_id,
             fallback_provider_id=agent_cfg.fallback_provider_id,
             fallback_model=agent_cfg.fallback_model,
+            # El equipo dicta el importe al corregir: es su confirmación, no una invención.
+            evidencia_extra=instruction,
         )
     except Exception as e:
         logger.error("draft.refine_failed", conversation_id=str(conv.id), error=str(e))
