@@ -134,6 +134,48 @@ Reconstructed on 17 August 2026 from the codebase and CLAUDE.md. Dates are appro
 
 ---
 
+## DEC-14 · Rules are the floor, the LLM may only add
+
+**Decision:** The clinical guardrail is a deterministic word list that runs before the model. An optional second layer (`GUARDARRAIL_CLINICO_LLM`, off by default) asks a cheap LLM whether a message that the rules let through still sounds clinical. That layer can only turn a "pass" into a "hand off": it never overrides a rule, it is consulted only when the rules did not fire, and if it fails the message proceeds as if it did not exist.
+
+**Why:** A word list is auditable, free and works when the provider is down, but it misses paraphrase ("my mouth feels numb"). A classifier catches paraphrase but cannot be audited and drifts between model versions. Letting the LLM only add keeps the guarantee that matters (a rule hit is never lost) and buys recall where the list is blind. Cost asymmetry decides every tie: a false positive costs a human one minute; a false negative is the system opining on a patient's symptom.
+
+**Rejected:** An LLM-only classifier (no floor when the model is down). An LLM that can veto a rule hit (a prompt-injected message could talk its way out of a hand-off). Always-on second layer (one extra model call per message before anyone has measured the recall it buys).
+
+---
+
+## DEC-15 · The answer is checked after the model, not only instructed before it
+
+**Decision:** Before a reply leaves `run_agent`, every euro amount in it must appear in the context the model had (system prompt, history, user message, tool results of this turn). Otherwise the reply is replaced by a fixed sentence and a `salida_importe_no_respaldado` decision is logged. `SECURITY_GUARD` rule 7 additionally forbids answering with the price of a similar product.
+
+**Why:** Eval F2 showed the agent answering a question about a zirconia implant with the price of the porcelain one, opening with "yes". The prompt already said "if it is not in the knowledge base, it does not exist"; a prompt is a request, this is a check. Fail-closed on money: a false positive costs a person confirming a price, a false negative is an invented price the customer trusts.
+
+**Limits, stated on purpose:** Euro amounts only (times and dates are computed from the calendar and would produce false positives). A derived amount (a sum, a discount) is not literally in the context and is treated as unsupported. The similarity threshold (0.3) was not changed: tuning it without a real knowledge base and recall evals would be guessing.
+
+**Rejected:** Verifying every number (false positives on phone numbers, addresses, appointment times). An LLM judge for groundedness (same auditability problem as DEC-14, plus latency on every reply). Raising the threshold now (unmeasurable here).
+
+---
+
+## DEC-16 · Escalation is a notice, not a reassignment
+
+**Decision:** A hand-off is a promise ("they will answer you as soon as they can"). After `handoff.sla_minutes` without a single operator message, one internal web push is sent per hand-off. Off by default. The bridge message can also say the business is closed (`handoff.out_of_hours_notice`, off by default).
+
+**Why:** Nothing used to check that the promise was kept. The smallest useful step is to tell the team. Who to reassign to, and what to tell the customer, are product decisions that depend on how each clinic staffs the inbox, so they are not made by a cron job.
+
+**Rejected:** Auto-reassignment (needs teams and skills, which the data model does not have). Writing to the customer on timeout (a second automated message to someone already waiting for a human). Default-on (a clinic with nobody on call would get alerts nobody can act on).
+
+---
+
+## DEC-17 · Router and domain agents: not built, designed
+
+**Decision:** Not implemented. One agent per channel with a per-agent tool allowlist stays. If the product moves towards a platform (open decision 1), the target is: gates first (user recognition, hours and queue, clinical/urgency rules), then a light router (rules, then a cheap LLM) to domain agents (information, appointments, after-sales), each with its own tools and its own slice of the knowledge base; hand-off always carries a summary.
+
+**Why:** One deployment per customer and seven tools do not need a router; it would add a failure surface and a cost per message. The design is recorded so that the decision is deliberate, not an omission.
+
+**Rejected:** Building the router now (no workload that needs it, and it would be built twice if the n8n question is answered the other way). A router that is itself a single big LLM prompt (one more unauditable decision in front of every message).
+
+---
+
 ## Open decisions
 
 | # | Question | Reference |
