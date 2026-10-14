@@ -1949,6 +1949,39 @@ async def dashboard_summary(
     )
 
 
+class PrimeraRespuestaHumana(BaseModel):
+    derivaciones: int
+    respondidas: int
+    sin_respuesta: int
+    mediana_min: float | None
+    p90_min: float | None
+
+
+class QualityKpis(BaseModel):
+    range: str
+    conversaciones: int
+    huecos_kb: int
+    huecos_kb_por_100: float
+    primera_respuesta_humana: PrimeraRespuestaHumana
+
+
+@router.get("/dashboard/quality", response_model=QualityKpis)
+async def dashboard_quality(
+    range_: str = Query("30d", alias="range"),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+) -> QualityKpis:
+    """Calidad de la atención: huecos de conocimiento y tiempo hasta la primera
+    respuesta humana tras una derivación. Ver `services/quality_kpis.py`."""
+    from datetime import timedelta, timezone as tz
+
+    from app.services.quality_kpis import calcular
+
+    days = {"7d": 7, "30d": 30, "90d": 90}.get(range_, 30)
+    datos = await calcular(db, datetime.now(tz.utc) - timedelta(days=days))
+    return QualityKpis(range=range_, **datos)
+
+
 class AttentionItem(BaseModel):
     conversation_id: str
     canal: str
