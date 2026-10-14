@@ -126,5 +126,27 @@ valor de la aplicación hoy.
 
 | # | Qué | Por qué |
 |---|---|---|
-| IT-13 | Arnés del agente conversacional | El guardarraíl clínico vive hoy en `services/agent_guardrails.py` y en el prompt. Falta convertirlo en casos de prueba de la categoría `limites`. Es la **Oleada 5** (skill `entrenando-agentes`), no se hace aquí |
-| IT-14 | Remoto de git | El repositorio no tiene copia fuera de esta máquina. **Oleada 0** |
+| IT-13 | Arnés del agente conversacional | **Hecho en lo determinista** (`arnes/`, 27 casos; guardarraíl en `agents/guardarrail_clinico.py`). Siguen sin ejecutarse contra la instalación real con LLM los casos F2, F3 y T2, y quedan 5 funcionales/tono en rojo. Ver `arnes/PROGRESO.md` |
+| IT-14 | Remoto de git | `origin` existe. Falta comprobar que cada rama de trabajo esté subida y la protección de `main` (decisión de Manuel, `DEPLOY_EASYPANEL.md` §7) |
+
+---
+
+## Trabajo de cierre de gaps — 14 oct 2026 (rama `feat/gaps-entrevista`)
+
+Cada fila nace de un intent (`planning/intent-002.md` a `intent-004.md`) o de una decisión
+(`DECISIONS.md` DEC-14 a DEC-17). Columna `Review ✓`: **ninguna pasó todavía por `/review`**
+con revisor y crítico en subagentes distintos; hasta entonces no están `DONE`.
+
+| ID | Qué | Skill | Model | Eval ✓ | Review ✓ | Estado |
+|---|---|---|---|---|---|---|
+| G1 | Aviso de IA en el primer mensaje de texto (cierra L9-B) | ninguna | codex | `test_aviso_ia_primera_interaccion.py` + L9 sin `xfail`, ejecutados | pendiente | `REVIEW` |
+| G2a | Regla 7 de `SECURITY_GUARD` (anti-sustitución) | ninguna | codex | Prueba del prompt ensamblado, ejecutada. **F2 sigue sin ejecutarse con LLM real** | pendiente | `REVIEW` |
+| G2b | Verificador de importes en la salida + `consultar_kb` vacío explícito | ninguna | sonnet (por orden expresa de Manuel, no Codex) | `test_output_verifier.py`, ejecutado en rojo y en verde | pendiente | `REVIEW` |
+| G3 | Guardarraíl: cobertura, seguimiento sin pronombre y capa LLM opcional | ninguna | sonnet (por orden expresa de Manuel, no Codex) | `test_guardarrail_clinico_cobertura.py` y `_capa_llm.py`. Capa LLM probada solo con modelo simulado | pendiente | `REVIEW` |
+| G5 | KPIs de calidad (`GET /dashboard/quality`) | ninguna | sonnet | `test_quality_kpis.py` contra Postgres real | pendiente | `REVIEW` |
+| G6 | Escalado SLA y aviso de fuera de horario (ambos opt-in) | ninguna | sonnet | `test_handoff_sla.py` contra Postgres real | pendiente | `REVIEW` |
+| G7 | DPIA técnica (borrador) en `../legal/dpia-chatbot-borrador.md` | ninguna | sonnet | n/a (documento): rutas citadas comprobadas | pendiente | `REVIEW` |
+
+**Sin hacer, a propósito:** ejecutar F2/T2/F3 contra la app real (necesita claves de LLM y gasta
+dinero), router y agentes por dominio (DEC-17), streaming de voz, equipos y skills de handoff,
+cifrado de `Message.contenido`, CI bloqueando el despliegue.
