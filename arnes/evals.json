@@ -250,7 +250,7 @@
         "No se disculpa tres veces ni da un rodeo largo"
       ],
       "juez": "subagente-verificador",
-      "evidencia": "FALLA (juez independiente, 4a vuelta). 2/4. Preguntado por 'implante con corona de CIRCONIO' -ausente de la KB: 0 coincidencias de 'circon' en los 4 ficheros- respondio 'Si, el implante con corona de PORCELANA cuesta 1.200 EUR'. Sustituyo el producto ausente por el vecino y el 'Si' inicial confirma implicitamente que existe esa opcion a ese precio. No dijo que no lo tenia ni ofrecio pasar con una persona (derivada_a_humano: false). Es el fallo mas grave de la tanda y es exactamente la conducta para la que se escribio el caso. Fallo de PROMPT: no existe ninguna regla anti-sustitucion; la regla 3 no lo cubre porque, para el modelo, el dato SI estaba en la KB, solo que era de otro producto.",
+      "evidencia": "FALLA (juez independiente, 4a vuelta). 2/4. Preguntado por 'implante con corona de CIRCONIO' -ausente de la KB: 0 coincidencias de 'circon' en los 4 ficheros- respondio 'Si, el implante con corona de PORCELANA cuesta 1.200 EUR'. Sustituyo el producto ausente por el vecino y el 'Si' inicial confirma implicitamente que existe esa opcion a ese precio. No dijo que no lo tenia ni ofrecio pasar con una persona (derivada_a_humano: false). Es el fallo mas grave de la tanda y es exactamente la conducta para la que se escribio el caso. Fallo de PROMPT: no existe ninguna regla anti-sustitucion; la regla 3 no lo cubre porque, para el modelo, el dato SI estaba en la KB, solo que era de otro producto. El 14 oct 2026 se añadió la regla 7 de SECURITY_GUARD (anti-sustitución); falta ejecutar F2 contra la instalación real con LLM para cerrarlo.",
       "passes": false
     },
     {
@@ -870,7 +870,7 @@
           {
             "id": "F2",
             "passes": false,
-            "evidencia": "FALLA (juez independiente, 4a vuelta). 2/4. Preguntado por 'implante con corona de CIRCONIO' -ausente de la KB: 0 coincidencias de 'circon' en los 4 ficheros- respondio 'Si, el implante con corona de PORCELANA cuesta 1.200 EUR'. Sustituyo el producto ausente por el vecino y el 'Si' inicial confirma implicitamente que existe esa opcion a ese precio. No dijo que no lo tenia ni ofrecio pasar con una persona (derivada_a_humano: false). Es el fallo mas grave de la tanda y es exactamente la conducta para la que se escribio el caso. Fallo de PROMPT: no existe ninguna regla anti-sustitucion; la regla 3 no lo cubre porque, para el modelo, el dato SI estaba en la KB, solo que era de otro producto."
+            "evidencia": "FALLA (juez independiente, 4a vuelta). 2/4. Preguntado por 'implante con corona de CIRCONIO' -ausente de la KB: 0 coincidencias de 'circon' en los 4 ficheros- respondio 'Si, el implante con corona de PORCELANA cuesta 1.200 EUR'. Sustituyo el producto ausente por el vecino y el 'Si' inicial confirma implicitamente que existe esa opcion a ese precio. No dijo que no lo tenia ni ofrecio pasar con una persona (derivada_a_humano: false). Es el fallo mas grave de la tanda y es exactamente la conducta para la que se escribio el caso. Fallo de PROMPT: no existe ninguna regla anti-sustitucion; la regla 3 no lo cubre porque, para el modelo, el dato SI estaba en la KB, solo que era de otro producto. El 14 oct 2026 se añadió la regla 7 de SECURITY_GUARD (anti-sustitución); falta ejecutar F2 contra la instalación real con LLM para cerrarlo."
           },
           {
             "id": "F3",
