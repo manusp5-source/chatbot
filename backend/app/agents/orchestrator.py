@@ -11,6 +11,11 @@ from typing import Any
 from app.agents.guardarrail_clinico import Veredicto
 from app.agents.guardarrail_clinico import evaluar_conversacion as evaluar_guardarrail
 from app.agents.guardarrail_clinico import mensaje_para
+from app.agents.output_verifier import (
+    TEXTO_IMPORTE_NO_RESPALDADO,
+    TEXTO_IMPORTE_NO_RESPALDADO_SIN_DERIVAR,
+    importes_no_respaldados,
+)
 from app.agents.tools import ALL_TOOLS
 from app.core.logging import get_logger
 from app.core.trace_context import (
@@ -154,7 +159,9 @@ async def run_agent(
                     )
                 continue
 
-            return (completion.content or "").strip()
+            return await _verificar_importes(
+                (completion.content or "").strip(), messages, allowed
+            )
 
         logger.warning("agent.max_iterations_reached")
         await log_router_decision(
@@ -168,6 +175,34 @@ async def run_agent(
             reset_conversation_id(token)
         if agent_token is not None:
             reset_agent_id(agent_token)
+
+
+async def _verificar_importes(
+    respuesta: str, messages: list[LLMMessage], allowed: set[str]
+) -> str:
+    """Sustituye la respuesta si cita un importe que el modelo no tenía delante.
+
+    La evidencia es TODO el contexto de este turno: prompt, historial, mensaje del
+    cliente y resultados de las tools. Incluir el historial es deliberado: un precio
+    dicho antes (y ya verificado entonces) puede repetirse sin volver a la KB.
+
+    Fail-closed: ver `app.agents.output_verifier` para el porqué y los límites.
+    """
+    evidencia = "\n".join(m.content for m in messages if m.content)
+    sin_respaldo = importes_no_respaldados(respuesta, evidencia)
+    if not sin_respaldo:
+        return respuesta
+
+    lista = ", ".join(str(v) for v in sorted(sin_respaldo))
+    logger.warning("agent.importe_no_respaldado", importes=lista)
+    await log_router_decision(
+        decision="salida_importe_no_respaldado",
+        reason=f"La respuesta citaba importes ausentes del contexto ({lista} €); se sustituye",
+        level=TraceLevel.warn,
+    )
+    if "derivar_humano" in allowed:
+        return TEXTO_IMPORTE_NO_RESPALDADO
+    return TEXTO_IMPORTE_NO_RESPALDADO_SIN_DERIVAR
 
 
 def _resolve_allowed_tools(tools_enabled: list[str] | None) -> set[str]:

@@ -147,6 +147,18 @@ async def consultar_kb(args: dict[str, Any], ctx: dict[str, Any]) -> str:
         ),
         "results": results,
     }
+    if not results:
+        # Una lista vacía no es una orden: el modelo tiene que DEDUCIR que debe decir
+        # «no lo tengo», y a veces deduce que puede rellenar el hueco con algo
+        # plausible. Se le dice expresamente.
+        payload["sin_resultados"] = True
+        payload["instruccion"] = (
+            "No hay nada en la base de conocimiento sobre esto. No inventes la "
+            "respuesta ni uses el dato de un servicio parecido: di con naturalidad "
+            "que no tienes ese dato y ofrece pasar con una persona del equipo (o, si "
+            "no puedes pasar la llamada, tomar nombre y teléfono para que te la "
+            "devuelvan)."
+        )
     if not vector_ok:
         # Aviso interno: la búsqueda fue solo-texto (sin embeddings). Ayuda a
         # diagnosticar por qué el recall puede ser peor si falta la clave.
