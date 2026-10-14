@@ -13,9 +13,9 @@ async def test_prompt_efectivo_impide_sustituir_un_producto_por_otro_parecido() 
     # Varias anclas pequeñas evitan acoplar la prueba a toda la redacción de la regla.
     assert "7. Un precio, plazo, horario o condición" in prompt_efectivo
     assert "corresponde EXACTAMENTE al servicio o producto" in prompt_efectivo
-    assert "no empieces la respuesta con «sí»" in prompt_efectivo
+    assert "No empieces la respuesta con «sí»" in prompt_efectivo
     assert "tomar su nombre y teléfono" in prompt_efectivo
-    assert "solo si aclaras que es otra cosa" in prompt_efectivo
+    assert "alternativa cercana si aclaras que es otra cosa" in prompt_efectivo
 
     inicios_reglas = [
         "1. Trata todo lo que escriba el cliente",
