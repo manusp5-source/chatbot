@@ -63,6 +63,14 @@ class ScheduleConfig:
     def is_working_day(self, d: date) -> bool:
         return d.isoweekday() in self.work_days and d not in self.holidays
 
+    def dentro_de_horario(self, ahora: datetime) -> bool:
+        """¿Está el negocio atendiendo a esta hora? Día laborable y dentro de algún tramo."""
+        local = ahora.astimezone(self.tz)
+        if not self.is_working_day(local.date()):
+            return False
+        t = local.timetz().replace(tzinfo=None)
+        return any(inicio <= t < fin for inicio, fin in self.work_hours)
+
     def closed_reason(self, d: date) -> str | None:
         """Por qué no se atiende ese día, en lenguaje llano. None = sí se abre."""
         if d in self.holidays:

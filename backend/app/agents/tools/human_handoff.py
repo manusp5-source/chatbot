@@ -127,6 +127,36 @@ async def _sanitize_bridge_message(text: str | None) -> str:
     return candidate or default
 
 
+async def _aviso_fuera_de_horario() -> str:
+    """Frase extra para el mensaje puente cuando se deriva con el negocio cerrado.
+
+    Opt-in (`handoff.out_of_hours_notice`): sin activar devuelve "" y el mensaje es el de
+    siempre. Prometer «te contestan en cuanto puedan» a las 3 de la madrugada sin decir que
+    estamos cerrados es la promesa que más rápido se incumple. Best-effort: ante cualquier
+    fallo, sin frase extra; nunca bloquea la derivación.
+    """
+    try:
+        from app.agents.tools.schedule_config import get_schedule_config, now_in
+        from app.services.app_settings import get_app_setting
+        from app.services.handoff_sla import (
+            SETTING_AVISO_FUERA_DE_HORARIO,
+            TEXTO_FUERA_DE_HORARIO,
+            aviso_fuera_de_horario_activo,
+        )
+
+        if not aviso_fuera_de_horario_activo(
+            await get_app_setting(SETTING_AVISO_FUERA_DE_HORARIO, "")
+        ):
+            return ""
+        cfg = await get_schedule_config()
+        if cfg.dentro_de_horario(now_in(cfg.tz)):
+            return ""
+        return TEXTO_FUERA_DE_HORARIO
+    except Exception as e:  # noqa: BLE001 — nunca bloquea la derivación
+        logger.warning("handoff.bridge.fuera_horario_error", error=str(e))
+        return ""
+
+
 # Canales donde el mensaje puente SE ENVÍA en caliente. Email queda fuera a
 # propósito: en email el agente NUNCA envía, deja un borrador en Gmail para
 # revisión (F5c), y voz (Retell) es de solo lectura — no hay forma de meter
@@ -216,6 +246,7 @@ async def _send_handoff_bridge_message(
         return
 
     text = await _sanitize_bridge_message(mensaje_custom)
+    text += await _aviso_fuera_de_horario()
     try:
         ext_id = await send_text_to_conversation(conv, text)
     except (MessagingWindowClosed, SendNotConfirmed) as e:

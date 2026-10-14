@@ -25,12 +25,18 @@ celery_app.autodiscover_tasks(["app.tasks"], force=True)
 
 
 # Importar tareas para registrarlas
-from app.tasks import process_message, index_document, transcribe_audio, ping, drain_buffer, poll_gmail, purge_emails, purge_internal_logs, purge_audios, backup_db, outbound_send, web_push_send, notify_pending_check, detect_correction_gaps, detect_faq_gaps, refresh_prices  # noqa: E402,F401
+from app.tasks import process_message, index_document, transcribe_audio, ping, drain_buffer, poll_gmail, purge_emails, purge_internal_logs, purge_audios, backup_db, outbound_send, web_push_send, notify_pending_check, escalate_handoffs, detect_correction_gaps, detect_faq_gaps, refresh_prices  # noqa: E402,F401
 
 
 celery_app.conf.beat_schedule = {
     "ping-every-5min": {
         "task": "app.tasks.ping.ping",
+        "schedule": crontab(minute="*/5"),
+    },
+    # Escalado de derivaciones sin respuesta humana. Sin efecto mientras
+    # `handoff.sla_minutes` sea 0 (el valor por defecto).
+    "escalate-handoffs": {
+        "task": "app.tasks.escalate_handoffs.escalate_handoffs",
         "schedule": crontab(minute="*/5"),
     },
     # F5a — sondea Gmail cada 2 minutos en busca de correo entrante nuevo.
