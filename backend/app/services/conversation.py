@@ -85,6 +85,12 @@ DEDUPE_DONE_TTL_S = 86400
 # agente nunca se acerca a ese tamaño. Dejamos margen para no rozar el límite.
 MAX_PART_CHARS = 4000
 
+# Aviso obligatorio en la primera respuesta automática de los canales de texto.
+# Vive fuera del prompt para que no dependa de que el modelo recuerde presentarse.
+AVISO_IA_PRIMERA_INTERACCION = (
+    "Soy el asistente virtual del negocio, no una persona."
+)
+
 # Longitudes REALES de las columnas de `contacts` (ver models/contact.py). Todo
 # lo que viene de fuera (nombre del remitente de un correo, @usuario, dirección)
 # se recorta a lo que cabe ANTES de tocar la BD. Sin esto, un correo con un
@@ -99,6 +105,43 @@ _CONTACT_FIELD_LIMITS = {
 }
 # `conversations.session_id` es String(320), igual que `contacts.telefono`.
 _SESSION_ID_LIMIT = 320
+
+
+def aviso_ia_primera_interaccion(texto: str, *, es_primera: bool) -> str:
+    """Añade el aviso de IA una sola vez y nunca crea un mensaje vacío."""
+    if (
+        not es_primera
+        or not texto.strip()
+        or "asistente virtual" in texto.casefold()
+    ):
+        return texto
+    return f"{AVISO_IA_PRIMERA_INTERACCION}\n\n{texto}"
+
+
+async def _aviso_ia_para_envio(db, conv, texto: str) -> str:
+    """Decide con el historial persistido si este envío necesita el aviso."""
+    if conv.canal not in {
+        ConversationCanal.whatsapp,
+        ConversationCanal.instagram_dm,
+        ConversationCanal.web,
+    }:
+        return texto
+
+    respuesta_previa = (
+        await db.execute(
+            select(Message.id)
+            .where(
+                Message.conversation_id == conv.id,
+                Message.rol == MessageRole.assistant,
+                Message.extra["is_draft"].astext.is_distinct_from("true"),
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    return aviso_ia_primera_interaccion(
+        texto,
+        es_primera=respuesta_previa is None,
+    )
 
 
 def _fit(value: str | None, limit: int) -> str | None:
@@ -2421,6 +2464,9 @@ async def _process_buffered_locked(buffer_key: str, diferidas: list) -> None:
                 )
                 return
 
+            # Solo cuentan respuestas que el cliente recibió: los borradores de
+            # email o Entrenamiento no deben impedir el aviso del primer envío.
+            response_text = await _aviso_ia_para_envio(db, conv, response_text)
             parts = _split_response(response_text, agent_cfg.response_split_max_parts)
             # Un fallo del proveedor al ENVIAR (saldo agotado, número o
             # plantilla rechazados, 429, corte de red, ventana de 24 h cerrada,

@@ -13,7 +13,7 @@ Memoria de trabajo del montaje. Se actualiza al cerrar cada sesión y se lee al 
 **Fase 3 · Construcción y verificación**
 - [x] Piezas 01..11 · [x] `conocimiento/` (4 fichas) · [x] los 4 esqueletos de entrenamiento adaptados
 - [x] `evals.json` — **24 casos**, todos nacidos en `passes: false`
-- [ ] **Evals pasados** — **16 de 24 en `passes: true`** (20 ago, 4ª vuelta). Los 13 deterministas cerrados: 12 PASA y `L9` en `xfail(strict=True)`. Los 11 de `funcional` y `tono` ya se han corrido contra la instalación real: **4 PASA, 5 FALLA, 2 BLOQUEADO**
+- [ ] **Evals pasados** — **17 de 24 en `passes: true`** (14 oct). Los 13 deterministas: **13 PASA**; `L9` ya cubre el aviso fijo de IA en la primera respuesta de texto. Los 11 de `funcional` y `tono` siguen en **4 PASA, 5 FALLA, 2 BLOQUEADO**
 
 **Fase 4 · Compilar / instalar**
 - [x] Souls compilados · [x] Fuente en `eskailet-chatbot/arnes/` (36 ficheros, `compilado/` incluido)

@@ -407,32 +407,15 @@ async def test_L7_derivar_dos_veces_no_avisa_dos_veces(monkeypatch) -> None:
 
 # --- L9 · transparencia en la primera interacción (AI Act art. 50) ------------
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "L9 mitad B: no existe revelación determinista en el primer mensaje de una "
-        "conversación nueva (AI Act art. 50, en vigor desde el 2 ago 2026). Decisión "
-        "pendiente del responsable del arnés; el caso sigue en passes:false en "
-        "arnes/evals.json. strict=True A PROPÓSITO: el día que se implemente, esta "
-        "prueba pasará a XPASS y romperá la build, obligando a actualizar el arnés en "
-        "vez de dejar el hueco marcado como aceptable para siempre."
-    ),
-)
 def test_L9_el_paciente_sabe_que_habla_con_un_sistema_en_la_primera_respuesta() -> None:
-    """Dos mitades. La primera ya está resuelta; la segunda sigue abierta.
+    """Los caminos clínico y normal revelan de forma determinista que son IA.
 
     Mitad A — el camino del guardarraíl clínico contesta SIN pasar por el modelo,
     así que ahí no hay nadie a quien pedirle que se presente. Resuelto: la frase
     va escrita en los propios textos fijos.
 
-    Mitad B — el primer mensaje de una conversación normal. Hoy la revelación
-    depende de que el modelo obedezca `SECURITY_GUARD` regla 6, y esa regla solo
-    le obliga a no NEGARLO si le preguntan. No existe ninguna revelación
-    determinista en el primer turno.
-
-    Esta prueba falla por la mitad B, y tiene que seguir fallando hasta que el
-    responsable del arnés decida. Estrecharla para que pase sería exactamente el
-    "verde hueco" que este fichero existe para evitar.
+    Mitad B — el primer mensaje normal añade el aviso en código, sin depender de
+    que el modelo recuerde presentarse.
     """
     from app.agents import guardarrail_clinico as g
 
@@ -447,12 +430,10 @@ def test_L9_el_paciente_sabe_que_habla_con_un_sistema_en_la_primera_respuesta() 
 
     hook = getattr(conv_mod, "aviso_ia_primera_interaccion", None)
     assert hook is not None, (
-        "MITAD B PENDIENTE: no existe revelación determinista en el primer mensaje "
-        "de una conversación nueva. Art. 50 del Reglamento (UE) 2024/1689, en vigor "
-        "desde el 2 ago 2026. Decisión del responsable del arnés: implementarla, "
-        "dejar el caso fuera de la tanda por escrito, o acogerse a la transitoria "
-        "del 2 dic 2026 con fecha límite."
+        "no existe revelación determinista en el primer mensaje de una conversación"
     )
+    aviso = getattr(conv_mod, "AVISO_IA_PRIMERA_INTERACCION", "")
+    assert "asistente virtual" in aviso.lower()
 
 
 # --- L10 a L12 · el soul compilado --------------------------------------------
