@@ -100,6 +100,13 @@ URGENCIA: tuple[str, ...] = (
     "no puedo tragar", "no puedo abrir la boca",
     "me he dado un golpe", "traumatismo", "se me ha partido un diente",
     "se me ha caido un diente",
+    # Perdida de conocimiento y dificultad respiratoria con otras palabras
+    "pierdo el conocimiento", "he perdido el conocimiento",
+    "no siento la cara", "se me duerme la cara",
+    "dificultad para respirar", "dificultad al respirar",
+    # Otros idiomas (lo basico: un paciente extranjero o catalanoparlante escribe asi)
+    "i can't breathe", "can't breathe", "cannot breathe", "emergency",
+    "no puc respirar", "cara inflada", "cara inflat",
 )
 
 CLINICO: tuple[str, ...] = (
@@ -126,6 +133,26 @@ CLINICO: tuple[str, ...] = (
     # Postoperatorio
     "postoperatorio", "despues de la extraccion", "me han quitado",
     "se me ha caido el empaste", "se me ha roto la funda", "punto de sutura",
+    # Plurales y conjugaciones: "duele" estaba y "duelen" no, y un paciente con dos
+    # muelas doloridas escribe "me duelen".
+    "duelen", "doloroso", "dolorosa", "dolorido", "dolorida", "me molesta", "molestias",
+    "sangran", "sangrando", "sangrar", "sangro",
+    "hinchados", "hinchadas", "infectada", "infectados", "infectadas",
+    # Sintomas sueltos
+    "mareo", "mareos", "mareado", "mareada", "nausea", "nauseas",
+    "vomito", "vomitos", "vomitado",
+    "llaga", "llagas", "afta", "aftas", "ulcera", "bulto",
+    "ardor", "punzada", "pinchazo", "palpitante",
+    # Parafrasis sin ninguna palabra de diccionario clinico: el paciente describe
+    # una sensacion, no un sintoma. Son las que mas facilmente se cuelan.
+    "me noto raro", "me noto rara", "me encuentro mal", "no me encuentro bien",
+    "me siento mal", "algo raro", "raro en la boca", "esto no es normal",
+    "no es normal esto",
+    # Otros idiomas, lo basico
+    "pain", "hurt", "hurts", "bleeding", "bleed", "swollen", "swelling", "fever",
+    "infection", "toothache",
+    "em fa mal", "fa mal", "sagna", "sagnat", "sagnar", "inflat", "inflada",
+    "inflamat", "febre",
 )
 
 
@@ -213,6 +240,12 @@ _ANAFORAS = (
     "lo que le dije",
     "lo que te conte",
     "al respecto",
+    # Seguimiento sin pronombre: el paciente habla del mismo sintoma con otras
+    # palabras. Solo cuentan tras una derivacion, asi que el riesgo de atraparle
+    # esta acotado a ese turno.
+    "sigue igual", "me sigue", "no se me pasa", "no se me quita",
+    "ha empeorado", "empeora", "ahi", "la misma", "como te decia", "como te digo",
+    "lo anterior",
 )
 
 _RE_ANAFORA = _compilar(_ANAFORAS)
