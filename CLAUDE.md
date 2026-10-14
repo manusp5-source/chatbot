@@ -70,7 +70,7 @@ backend/                 API, agente, tareas y modelo de datos
                          fichas, borrado RGPD, copias, presupuesto…)
     tasks/               tareas Celery + calendario de `beat`
     main.py              monta la app y registra los routers
-  tests/                 LAS PRUEBAS ESTÁN AQUÍ (123 ficheros), no en la raíz
+  tests/                 LAS PRUEBAS ESTÁN AQUÍ (130 ficheros, a 14 oct 2026), no en la raíz
   alembic.ini
   requirements.txt / requirements-dev.txt
   entrypoint.sh          espera a Postgres, migra y siembra al arrancar el contenedor

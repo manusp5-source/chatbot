@@ -38,7 +38,7 @@ es precisamente la que el diseño prometía y el código no tiene.
 | IT-06 | Esqueleto frontend | `[x]` | `frontend/src/router.tsx`, `components/ProtectedRoute.tsx`, `components/Layout.tsx`. El admin aterriza en la Home; el operador, en el inbox |
 | IT-07 | Cliente HTTP centralizado | `[x]` | `frontend/src/services/api.ts` y nueve servicios por área |
 | IT-08 | Servicio cifrado credenciales | `[≠]` | Existe, pero repartido: `core/encryption.py`, `core/encrypted_type.py` (tipo `EncryptedText`), `services/credentials.py`, `services/channel_secrets.py`. No hay `credentials_service.py` |
-| IT-09 | Tests automáticos críticos | `[x]` | `backend/tests/` — **122 ficheros** `test_*.py` |
+| IT-09 | Tests automáticos críticos | `[x]` | `backend/tests/` — **130 ficheros** `test_*.py` (a 14 oct 2026) |
 | IT-10 | Seed con datos demo | `[x]` | `app/scripts/seed.py`, lanzado por `backend/entrypoint.sh` al arrancar el contenedor |
 | IT-11 | Audit log automático | `[x]` | `services/audit.py`, tabla `audit_log`, panel en `pages/admin/AuditPage.tsx` |
 | IT-12 | EasyPanel + healthchecks | `[x]` | `DEPLOY_EASYPANEL.md`, `docker-compose.easypanel.yml`, `deployment/README.md`, `scripts/smoke.sh`, `api/health.py` |

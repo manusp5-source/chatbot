@@ -47,6 +47,8 @@ celery_app.conf.beat_schedule = {
     },
     # I8 — purga diaria de logs internos (disco): agent_trace_event y
     # llm_usage_log > 90 días, audit_log > 365 días. Por lotes e idempotente.
+    # (Los plazos reales son TRACE_RETENTION_DAYS=30, LLM_USAGE_RETENTION_DAYS=90 y
+    # AUDIT_RETENTION_DAYS=365 en core/config.py; las trazas son 30, no 90.)
     "purge-internal-logs": {
         "task": "app.tasks.purge_internal_logs.purge_internal_logs",
         "schedule": crontab(hour=4, minute=10),

@@ -20,7 +20,7 @@ Instagram DM, correo, chat web y voz.
 | Fase | Construido y en mantenimiento. No se planifica desde cero |
 | Rama | `feat/factoria-artefactos` |
 | Última tarea | Oleada 2 de FactorIA: reconstruir los artefactos del método a partir del código |
-| Pruebas | 122 ficheros en `backend/tests/` |
+| Pruebas | 130 ficheros en `backend/tests/` (a 14 oct 2026) |
 | CI | `.github/workflows/ci.yml` — pruebas, migraciones ida y vuelta, tipos y build del panel, tres imágenes Docker |
 | Migraciones | 55 revisiones, cabeza `0054_channel_secrets_encrypted` |
 
@@ -28,9 +28,9 @@ Instagram DM, correo, chat web y voz.
 
 | Qué | Detalle |
 |---|---|
-| **Sin remoto** | El repositorio no tiene copia fuera de esta máquina. Es el riesgo mayor y se salda en la **Oleada 0** del plan del paraguas |
+| **Remoto sin proteger** | `origin` existe (`github.com/manusp5-source/chatbot`), pero no hay protección de rama ni se ha comprobado que cada rama de trabajo esté subida. Lo sin commitear sigue sin estar a salvo: el hook `checkpoint.ps1` lo manda al stash |
 | **La CI no basta por sí sola** | Se dispara con el push a `main` y EasyPanel despliega ese mismo push: cuando se pone roja, el contenedor roto ya va camino de producción. Faltan dos cosas a mano — protección de rama en GitHub y despliegue por webhook en EasyPanel. Paso a paso en `DEPLOY_EASYPANEL.md` §7 |
-| **Guardarraíl clínico sin evals** | Vive en `services/agent_guardrails.py` y en el prompt. Convertirlo en casos de prueba de `limites` es la **Oleada 5** |
+| **Guardarraíl clínico: reglas + capa LLM opcional** | Vive en `agents/guardarrail_clinico.py` (reglas, el suelo) y `agents/guardarrail_clinico_llm.py` (capa 2, apagada por defecto, solo añade derivaciones). Con evals de `limites` y multi-turno en `arnes/` y en `tests/test_guardarrail_clinico*.py`. Sin cubrir: idiomas distintos de ES/EN/CA básicos y el seguimiento a dos turnos |
 
 ## Siguiente
 
