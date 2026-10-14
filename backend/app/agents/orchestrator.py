@@ -8,15 +8,17 @@ import time
 import uuid
 from typing import Any
 
-from app.agents.guardarrail_clinico import Veredicto
+from app.agents.guardarrail_clinico import NivelClinico, Veredicto
 from app.agents.guardarrail_clinico import evaluar_conversacion as evaluar_guardarrail
 from app.agents.guardarrail_clinico import mensaje_para
+from app.agents.guardarrail_clinico_llm import sospecha_clinica
 from app.agents.output_verifier import (
     TEXTO_IMPORTE_NO_RESPALDADO,
     TEXTO_IMPORTE_NO_RESPALDADO_SIN_DERIVAR,
     importes_no_respaldados,
 )
 from app.agents.tools import ALL_TOOLS
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.trace_context import (
     reset_agent_id,
@@ -136,6 +138,16 @@ async def run_agent(
         # continua el tema con un pronombre se saltaba el guardarrail sin
         # proponerselo. Ver `evaluar_conversacion` y los casos M* del arnes.
         veredicto = evaluar_guardarrail(history, user_message)
+        # Capa 2 (opt-in): solo si las reglas NO derivaron, y solo puede AÑADIR. Ver
+        # `guardarrail_clinico_llm` para los tres límites con los que se diseñó.
+        if (
+            veredicto is None
+            and settings.GUARDARRAIL_CLINICO_LLM
+            and await sospecha_clinica(llm, model, history, user_message)
+        ):
+            veredicto = Veredicto(
+                nivel=NivelClinico.clinico, termino="clasificador LLM (capa 2)"
+            )
         if veredicto is not None:
             return await _derivar_por_guardarrail(veredicto, ctx, allowed)
 

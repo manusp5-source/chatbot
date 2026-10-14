@@ -244,6 +244,12 @@ class Settings(BaseSettings):
     KB_MATCH_THRESHOLD: float = 0.3
     KB_TOP_K_DEFAULT: int = 5
 
+    # Capa 2 del guardarraíl clínico: un clasificador LLM que solo puede AÑADIR
+    # derivaciones (las reglas de `guardarrail_clinico` siguen siendo el suelo).
+    # Apagada por defecto: cuesta una llamada al modelo por cada mensaje que las
+    # reglas dejan pasar. Ver `app/agents/guardarrail_clinico_llm.py`.
+    GUARDARRAIL_CLINICO_LLM: bool = False
+
     # OpenAI
     OPENAI_API_KEY: str = ""
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
