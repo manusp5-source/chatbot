@@ -28,6 +28,17 @@ La asimetria manda en cada decision de este fichero:
 
 Ante la duda, se deriva. Siempre.
 
+Capa 2 (opcional): `guardarrail_clinico_llm`. Lo de arriba sigue siendo el suelo: una regla que
+dispara no se pregunta a nadie. La capa 2 solo se consulta cuando las reglas NO dispararon y solo
+puede AÑADIR derivaciones (nunca quitar una), con fail-open. Esta cabecera explica por que el
+suelo es una lista y no un clasificador; no dice que no pueda haber un clasificador encima.
+
+Falsos positivos aceptados a conciencia, para que nadie los «arregle» sin leer esto: términos
+cortos como «emergency», «pain» o «hurt» disparan también en frases administrativas («do you
+have emergency hours?», «pain-free whitening»), y «algo raro» o «esto no es normal» en
+«algo raro con la factura». El coste es una persona del equipo leyendo un mensaje que
+podría haber contestado el bot; quitar el término a cambio de un falso negativo no compensa.
+
 Base normativa
 --------------
 - RD 1907/1996: prohibe atribuir efectos o cualidades sanitarias en publicidad
@@ -243,9 +254,12 @@ _ANAFORAS = (
     # Seguimiento sin pronombre: el paciente habla del mismo sintoma con otras
     # palabras. Solo cuentan tras una derivacion, asi que el riesgo de atraparle
     # esta acotado a ese turno.
-    "sigue igual", "me sigue", "no se me pasa", "no se me quita",
-    "ha empeorado", "empeora", "ahi", "la misma", "como te decia", "como te digo",
-    "lo anterior",
+    # Frases que hablan del SINTOMA, no palabras sueltas: «ahi», «la misma» o «me sigue»
+    # solos atrapaban «¿la misma hora que el martes?» y «¿me sigue valiendo el seguro?».
+    "sigue igual", "me sigue doliendo", "me sigue molestando", "me sigue sangrando",
+    "no se me pasa", "no se me quita", "ha empeorado", "empeora",
+    "ahi mismo", "la misma muela", "el mismo dolor", "la misma zona",
+    "como te decia", "como te digo", "lo anterior",
 )
 
 _RE_ANAFORA = _compilar(_ANAFORAS)

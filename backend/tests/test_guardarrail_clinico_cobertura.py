@@ -135,6 +135,36 @@ def test_m5_pedir_cita_tras_una_derivacion_no_se_atrapa() -> None:
     assert evaluar_conversacion(historial, "vale, y quiero pedir cita para una limpieza") is None
 
 
+@pytest.mark.parametrize(
+    "mensaje",
+    [
+        "quiero cambiar la cita, ahí estaré el lunes",
+        "¿la misma hora que el martes?",
+        "¿me sigue valiendo el seguro?",
+        "me sigue interesando la ortodoncia",
+        "¿tenéis aparcamiento ahí?",
+    ],
+)
+def test_m7_una_peticion_normal_tras_una_derivacion_no_se_arrastra(mensaje) -> None:
+    """Review del 14 oct: «ahí», «la misma» y «me sigue» sueltos atrapaban peticiones de
+    recepción en modo clínico. Solo cuentan las frases que hablan del síntoma."""
+    historial = _tras_derivacion("me duele mucho la muela desde ayer")
+
+    assert evaluar_conversacion(historial, mensaje) is None
+
+
+@pytest.mark.parametrize(
+    "seguimiento",
+    ["me sigue doliendo", "me sigue molestando mucho", "el mismo dolor de antes", "la misma zona"],
+)
+def test_m8_el_seguimiento_del_sintoma_con_sus_palabras_sigue_derivado(seguimiento) -> None:
+    historial = _tras_derivacion("me duele mucho la muela desde ayer")
+
+    veredicto = evaluar_conversacion(historial, seguimiento)
+
+    assert veredicto is not None
+
+
 def test_m6_la_urgencia_no_se_degrada_en_el_seguimiento() -> None:
     historial = _tras_derivacion("no puedo respirar bien", NivelClinico.urgencia)
 
