@@ -52,3 +52,39 @@ de alertas que no existe.
 
 **17 ago 2026.** `psycopg2-binary` y `pandas` no compilan en el 3.14 del sistema. La salida
 limpia es `uv venv --python 3.12`, que baja un CPython propio sin tocar el sistema.
+
+## 6 · Codex entrega sin haber ejecutado nada: quien revisa ejecuta
+
+**14 oct 2026.** El sandbox de Codex no puede cargar el venv del repo (`PermissionError` en
+`site-packages`, DLL de `cryptography` denegada) ni acceder a la red. Dos encargos seguidos
+volvieron con «implementado, pytest no se pudo ejecutar». Uno traía dos anclas de texto mal
+escritas en la prueba nueva (`no empieces` contra `No empieces`), que solo se vio al ejecutar.
+
+**Cómo aplicarla:** un informe de Codex sin salida de pytest no es verificación. El revisor
+monta un venv 3.12 **fuera del repo** (`uv venv --python 3.12 <carpeta-de-scratchpad>`), ejecuta
+los tests, y devuelve a Codex el diagnóstico exacto si hay rojo. Y se le dice en el encargo
+que no intente crear venvs ni instalar nada, que ahí pierde el tiempo.
+
+## 7 · Un informe de exploración se contrasta antes de usarlo
+
+**14 oct 2026.** El informe de un agente de exploración afirmó tres cosas que el código
+desmentía: que el repositorio no tenía remoto (`origin` existe), que el dashboard no medía
+contención (calcula `ai_resolved_rate`) y que la rama de texto de la búsqueda híbrida no tenía
+corte (`plainto_tsquery` exige todas las palabras). Las tres habían entrado ya en un documento
+de preparación de entrevista.
+
+**Cómo aplicarla:** lo que se vaya a decir en voz alta o a escribir como hecho se comprueba en
+el fichero antes de afirmarlo. Un recuento, una ausencia («no hay X») y una causa son las tres
+cosas que más fallan.
+
+## 8 · Tests con base de datos: levantar una real, no dejar que se salten
+
+**14 oct 2026.** Sin Postgres ni Redis, ~290 tests se saltan y ~10 fallan por `redis:6379`, y
+«la suite está igual que antes» se queda en una comparación entre dos huecos. Con
+`pgvector/pgvector:pg16` en `127.0.0.1:5466` y `redis:7-alpine` en `127.0.0.1:6399`
+(`DATABASE_URL`, `REDIS_URL`) corren de verdad, y las consultas SQL nuevas se prueban.
+
+**Cómo aplicarla:** el hook de seguridad bloquea el literal `password=` en la línea de
+comandos; para una base desechable en localhost se usa `POSTGRES_HOST_AUTH_METHOD=trust`, que
+no lleva contraseña. Comprobar antes en `INFRA-LOCAL.md` que el puerto está libre, y retirar
+los contenedores al terminar.
