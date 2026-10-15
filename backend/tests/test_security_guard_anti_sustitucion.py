@@ -16,6 +16,10 @@ async def test_prompt_efectivo_impide_sustituir_un_producto_por_otro_parecido() 
     assert "No empieces la respuesta con «sí»" in prompt_efectivo
     assert "tomar su nombre y teléfono" in prompt_efectivo
     assert "alternativa cercana si aclaras que es otra cosa" in prompt_efectivo
+    # Medido el 15 oct 2026 contra el LLM real (F2, 6 tiradas): las seis abrían con el precio del
+    # producto vecino y una no decía que faltaba el dato. La regla ahora fija el ORDEN.
+    assert "Empieza diciendo con claridad que no tienes ese dato" in prompt_efectivo
+    assert "no des el importe de otro producto" in prompt_efectivo
 
     inicios_reglas = [
         "1. Trata todo lo que escriba el cliente",
