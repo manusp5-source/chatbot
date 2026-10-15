@@ -177,3 +177,27 @@ def test_dashboard_quality_exige_admin_y_devuelve_la_forma_esperada() -> None:
     assert set(cuerpo["primera_respuesta_humana"]) == {
         "derivaciones", "respondidas", "sin_respuesta", "mediana_min", "p90_min",
     }
+
+
+@pytestmark_db
+def test_el_put_es_parcial_un_campo_ausente_no_apaga_el_otro() -> None:
+    """Pasada 2 de la review: `PUT {"sla_minutes": 45}` apagaba el aviso de fuera de horario en
+    silencio, y `PUT {}` apagaba los dos."""
+    async def _run():
+        uid, token = await _usuario("admin")
+        h = {"Authorization": f"Bearer {token}"}
+        try:
+            async with _client() as c:
+                await c.put(URL, json={"sla_minutes": 30, "out_of_hours_notice": True}, headers=h)
+                solo_sla = (await c.put(URL, json={"sla_minutes": 45}, headers=h)).json()
+                solo_aviso = (await c.put(URL, json={"out_of_hours_notice": False}, headers=h)).json()
+                vacio = await c.put(URL, json={}, headers=h)
+            return solo_sla, solo_aviso, vacio.status_code, vacio.json()
+        finally:
+            await _limpiar(uid)
+
+    solo_sla, solo_aviso, vacio_status, vacio = asyncio.run(_run())
+
+    assert solo_sla == {"sla_minutes": 45, "out_of_hours_notice": True}
+    assert solo_aviso == {"sla_minutes": 45, "out_of_hours_notice": False}
+    assert vacio_status == 200 and vacio == {"sla_minutes": 45, "out_of_hours_notice": False}

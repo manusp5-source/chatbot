@@ -424,3 +424,28 @@ async def test_el_equipo_puede_dictar_un_importe_al_corregir_un_borrador(monkeyp
 )
 def test_formatos_que_se_escapaban_ahora_se_extraen(texto, esperado) -> None:
     assert extraer_importes(texto) == esperado
+
+
+def test_el_espacio_fino_u202f_tambien_separa_miles() -> None:
+    """Pasada 2 de la review: «1 200 €» con U+202F extraía solo 200."""
+    assert extraer_importes("Cuesta 1 200 €") == {Decimal("1200")}
+
+
+@pytest.mark.asyncio
+async def test_el_mensaje_al_cliente_de_derivar_humano_no_puede_llevar_importes() -> None:
+    """Camino que esquivaba el verificador: el modelo escribe `mensaje_al_cliente` al derivar y
+    se enviaba tal cual. Un puente de derivación no tiene por qué citar ningún precio."""
+    from unittest.mock import AsyncMock, patch
+
+    from app.agents.tools import human_handoff as hh
+
+    with patch.object(
+        hh, "_get_default_bridge_message", AsyncMock(return_value="Te paso con el equipo.")
+    ), patch.object(hh, "_forbidden_names", AsyncMock(return_value=())):
+        con_importe = await hh._sanitize_bridge_message(
+            "Son 999 EUR la limpieza, te paso con el equipo."
+        )
+        sin_importe = await hh._sanitize_bridge_message("Te paso con Marta del equipo de citas.")
+
+    assert con_importe == "Te paso con el equipo."
+    assert sin_importe == "Te paso con Marta del equipo de citas."

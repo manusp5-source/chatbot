@@ -171,3 +171,13 @@ def test_m6_la_urgencia_no_se_degrada_en_el_seguimiento() -> None:
     veredicto = evaluar_conversacion(historial, "me sigue doliendo eso")
 
     assert veredicto is not None and veredicto.nivel is NivelClinico.urgencia
+
+
+@pytest.mark.parametrize(
+    "seguimiento",
+    ["sigue doliendo", "me siguen doliendo", "siguen doliendo las dos", "no mejora"],
+)
+def test_m9_formas_de_seguimiento_que_se_escapaban_tras_estrechar_las_anaforas(seguimiento) -> None:
+    historial = _tras_derivacion("me duele mucho la muela desde ayer")
+
+    assert evaluar_conversacion(historial, seguimiento) is not None
