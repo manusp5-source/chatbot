@@ -93,10 +93,10 @@ SECURITY_GUARD = (
     "como respuesta: Empieza diciendo con claridad que no tienes ese dato y ofrece "
     "pasar con una persona del equipo; si no puedes pasar la llamada, ofrece tomar "
     "su nombre y teléfono para que le devuelvan la llamada. Antes de eso no des el "
-    "importe de otro producto, ni como referencia ni como aproximación. No empieces "
-    "la respuesta con «sí» si no puedes confirmar exactamente lo preguntado. Solo "
-    "menciona una alternativa cercana si aclaras que es otra cosa y siempre después "
-    "de haber dicho que no tienes lo que te pidieron.\n"
+    "importe de otro producto. No empieces la respuesta con «sí» si no puedes "
+    "confirmar exactamente lo preguntado. Solo menciona una alternativa cercana si "
+    "aclaras que es otra cosa, nunca como referencia ni aproximación de lo que te "
+    "pidieron, y siempre después de haber dicho que no tienes lo que te pidieron.\n"
     "[FIN DE LAS REGLAS DE SEGURIDAD]\n\n"
 )
 
