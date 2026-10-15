@@ -151,3 +151,29 @@ def test_un_sla_fuera_de_rango_se_rechaza_en_vez_de_corregirse_en_silencio(sla) 
             await _limpiar(uid)
 
     assert asyncio.run(_run()) == 422
+
+
+@pytestmark_db
+def test_dashboard_quality_exige_admin_y_devuelve_la_forma_esperada() -> None:
+    """Autorización de `GET /dashboard/quality`: sin token 401, cliente 403, admin 200."""
+    url = "/api/v1/admin/dashboard/quality"
+
+    async def _run():
+        uid_c, tok_c = await _usuario("cliente")
+        uid_a, tok_a = await _usuario("admin")
+        try:
+            async with _client() as c:
+                sin = await c.get(url)
+                cli = await c.get(url, headers={"Authorization": f"Bearer {tok_c}"})
+                adm = await c.get(url, headers={"Authorization": f"Bearer {tok_a}"})
+            return sin.status_code, cli.status_code, adm.status_code, adm.json()
+        finally:
+            await _limpiar(uid_c, uid_a)
+
+    sin, cli, adm, cuerpo = asyncio.run(_run())
+
+    assert (sin, cli, adm) == (401, 403, 200)
+    assert set(cuerpo) >= {"conversaciones", "huecos_kb", "huecos_kb_por_100", "primera_respuesta_humana"}
+    assert set(cuerpo["primera_respuesta_humana"]) == {
+        "derivaciones", "respondidas", "sin_respuesta", "mediana_min", "p90_min",
+    }

@@ -1680,6 +1680,55 @@ def _calendar_out(cfg) -> CalendarSettingsOut:
     )
 
 
+class HandoffSettings(BaseModel):
+    # 0 = apagado. Mismo tope que lee `handoff_sla.sla_minutos`: si aquí dejáramos pasar un
+    # valor que el lector corrige en silencio, lo guardado no sería lo que se aplica.
+    sla_minutes: int = Field(0, ge=0, le=24 * 60)
+    out_of_hours_notice: bool = False
+
+
+@router.get("/settings/handoff", response_model=HandoffSettings)
+async def get_handoff_settings(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+) -> HandoffSettings:
+    """Ajustes de derivación vigentes. Ambos vienen APAGADOS de fábrica."""
+    from app.services.handoff_sla import (
+        SETTING_AVISO_FUERA_DE_HORARIO,
+        SETTING_SLA_MINUTES,
+        aviso_fuera_de_horario_activo,
+        sla_minutos,
+    )
+
+    return HandoffSettings(
+        sla_minutes=sla_minutos(await get_app_setting(SETTING_SLA_MINUTES, "0", db)),
+        out_of_hours_notice=aviso_fuera_de_horario_activo(
+            await get_app_setting(SETTING_AVISO_FUERA_DE_HORARIO, "", db)
+        ),
+    )
+
+
+@router.put("/settings/handoff", response_model=HandoffSettings)
+async def update_handoff_settings(
+    body: HandoffSettings,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+) -> HandoffSettings:
+    """Activa o apaga el aviso interno de derivaciones sin respuesta (SLA) y la frase de
+    «fuera de horario» del mensaje puente. Ver `services/handoff_sla.py`."""
+    from app.services.handoff_sla import SETTING_AVISO_FUERA_DE_HORARIO, SETTING_SLA_MINUTES
+
+    await set_app_setting(SETTING_SLA_MINUTES, str(body.sla_minutes), db)
+    await set_app_setting(SETTING_AVISO_FUERA_DE_HORARIO, "1" if body.out_of_hours_notice else "0", db)
+    await db.commit()
+    await record_audit(
+        db, user_id=user.id, action="settings.handoff_updated", entity="app_setting",
+        after=body.model_dump(),
+    )
+    await db.commit()
+    return body
+
+
 @router.get("/settings/calendar", response_model=CalendarSettingsOut)
 async def get_calendar_settings(
     _: User = Depends(require_admin),
