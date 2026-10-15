@@ -184,6 +184,7 @@ async def run_agent(
                 resultados=messages[inicio_del_turno:],
                 evidencia_extra=evidencia_extra,
                 allowed=allowed,
+                canal=ctx.get("channel"),
             )
 
         logger.warning("agent.max_iterations_reached")
@@ -246,6 +247,7 @@ async def _verificar_importes(
     resultados: list[LLMMessage],
     evidencia_extra: str | None,
     allowed: set[str],
+    canal: str | None = None,
 ) -> str:
     """Sustituye la respuesta si cita un importe sin respaldo en la evidencia permitida.
 
@@ -271,7 +273,9 @@ async def _verificar_importes(
         reason=f"La respuesta citaba importes ausentes del contexto ({lista} €); se sustituye",
         level=TraceLevel.warn,
     )
-    if "derivar_humano" in allowed:
+    # El canal manda sobre la lista de tools: un agente legacy de voz (`tools_enabled=None`)
+    # tiene `derivar_humano` en su lista, pero una llamada en curso no se puede pasar.
+    if "derivar_humano" in allowed and canal != "retell_voice":
         return TEXTO_IMPORTE_NO_RESPALDADO
     return TEXTO_IMPORTE_NO_RESPALDADO_SIN_DERIVAR
 

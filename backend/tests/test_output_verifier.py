@@ -216,6 +216,40 @@ async def test_sin_poder_derivar_el_texto_ofrece_devolver_la_llamada(monkeypatch
     assert "persona" not in salida.lower().replace("una persona del equipo", "")
 
 
+@pytest.mark.asyncio
+async def test_en_voz_un_agente_con_todas_las_tools_tampoco_ofrece_pasar_con_una_persona(
+    monkeypatch,
+) -> None:
+    """Un agente legacy (`tools_enabled=None`) tiene `derivar_humano` en su lista, pero una
+    llamada en curso no se puede pasar a nadie: el canal manda, no la lista de tools."""
+    from app.agents import orchestrator as orq
+
+    proveedor = _Proveedor("Cuesta 3.000 €.")
+
+    async def _resolver(*_a, **_k):
+        return proveedor
+
+    async def _sin_fecha():
+        return ""
+
+    async def _nada(**_k):
+        return None
+
+    monkeypatch.setattr(orq, "resolve_llm_provider", _resolver)
+    monkeypatch.setattr(orq, "_linea_de_hoy", _sin_fecha)
+    monkeypatch.setattr(orq, "log_router_decision", _nada)
+
+    salida = await orq.run_agent(
+        system_prompt="Eres el asistente.",
+        history=[],
+        user_message="¿cuánto cuesta?",
+        context={"channel": "retell_voice"},
+        tools_enabled=None,  # legacy: todas las tools, incluida derivar_humano
+    )
+
+    assert salida == TEXTO_IMPORTE_NO_RESPALDADO_SIN_DERIVAR
+
+
 # --- consultar_kb sin resultados ---------------------------------------------
 
 
