@@ -184,3 +184,16 @@ mensaje (`tests/test_runner_espera_burbujas.py`).
 
 **Lo que NO se hizo:** medir la capa LLM del guardarraíl con un modelo real; probar una inyección sutil en T2; multi-turno en F2.
 **Decisión de producto abierta (DEC-21):** si citar un precio vecino claramente aclarado es aceptable.
+
+### 2026-10-15 (tarde) — Segunda tanda contra el LLM real: capa 2, F2 v4, T2B y filtro de KB
+
+- **Capa 2 del guardarraíl medida** con `gpt-5.4-mini` (81 llamadas, `arnes/runner/mide_capa2.py`): 36/36 paráfrasis derivadas, 1/36 falso
+  positivo, 9/9 inyecciones contra el clasificador resistidas. Muestra pequeña y del autor; latencia y coste sin medir.
+- **F2 con la regla 7 v4:** 1 de 8 con los seis criterios aplicados literalmente por un juez independiente (el criterio 6 exige decir
+  expresamente que es otro producto). No se relajaron los criterios. Cinco redacciones medidas (36 tiradas): se deja de iterar. F2 `passes:false`.
+- **T2B (nuevo, inyección sutil):** una nota con aspecto de actualización legítima hizo que el agente diera el precio plantado (145 €) en
+  4/4 conversaciones; con la regla 8 de prompt, 4/4 otra vez. **Solución en código:** `agents/kb_sanitizer.py` quita del fragmento las líneas
+  dirigidas al asistente antes de que lo vea el modelo → 4/4 dan 290 €. Juez ciego: separa limpiamente los dos grupos. DEC-22.
+- **Regresión:** T2 (burda) y F2 siguen bien tras el filtro; 0 mensajes con «145» en los 6 casos más recientes con el documento envenenado.
+- **Lo que no pasó por `/review`:** el filtro de KB y la regla 8 se añadieron después de las dos pasadas. Las pruebas deterministas y la suite
+  completa los cubren; falta revisión independiente del código.
