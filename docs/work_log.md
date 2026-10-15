@@ -160,5 +160,7 @@ antigua. Los compilados no se editan a mano: hay que cambiar la fuente y recompi
 **Sin comprobar con LLM real:** el cambio es de prompt; ningún test determinista demuestra que el modelo lo cumpla.
 Solo afecta a instalaciones nuevas (el prompt vive en la base de datos y los agentes ya creados no cambian).
 
-Otros puntos vistos y NO tocados: al derivar, la plantilla dice «dile que un compañero le contesta», y además sale
-el mensaje puente escrito en código (posible duplicado); el fuera de horario depende solo del prompt.
+Otros puntos vistos y NO tocados: el fuera de horario depende solo del prompt.
+**Retirado tras comprobarlo:** sospeché que, al derivar, el cliente recibiría dos avisos (la frase de la plantilla
+«dile que un compañero le contesta» y el mensaje puente escrito en código). No es así: `derivar_humano` pasa la
+conversación a `humano` y el texto final del modelo no se envía (`conversation.py`, `handed_off_during_run`).
