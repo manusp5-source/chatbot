@@ -1708,25 +1708,48 @@ async def get_handoff_settings(
     )
 
 
+class HandoffSettingsUpdate(BaseModel):
+    """Parcial: un campo ausente se CONSERVA. Con el modelo completo, `PUT {"sla_minutes": 45}`
+    apagaba en silencio el aviso de fuera de horario (por el valor por defecto)."""
+
+    sla_minutes: int | None = Field(None, ge=0, le=24 * 60)
+    out_of_hours_notice: bool | None = None
+
+
 @router.put("/settings/handoff", response_model=HandoffSettings)
 async def update_handoff_settings(
-    body: HandoffSettings,
+    body: HandoffSettingsUpdate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_admin),
 ) -> HandoffSettings:
     """Activa o apaga el aviso interno de derivaciones sin respuesta (SLA) y la frase de
     «fuera de horario» del mensaje puente. Ver `services/handoff_sla.py`."""
-    from app.services.handoff_sla import SETTING_AVISO_FUERA_DE_HORARIO, SETTING_SLA_MINUTES
+    from app.services.handoff_sla import (
+        SETTING_AVISO_FUERA_DE_HORARIO,
+        SETTING_SLA_MINUTES,
+        aviso_fuera_de_horario_activo,
+        sla_minutos,
+    )
 
-    await set_app_setting(SETTING_SLA_MINUTES, str(body.sla_minutes), db)
-    await set_app_setting(SETTING_AVISO_FUERA_DE_HORARIO, "1" if body.out_of_hours_notice else "0", db)
+    if body.sla_minutes is not None:
+        await set_app_setting(SETTING_SLA_MINUTES, str(body.sla_minutes), db)
+    if body.out_of_hours_notice is not None:
+        await set_app_setting(
+            SETTING_AVISO_FUERA_DE_HORARIO, "1" if body.out_of_hours_notice else "0", db
+        )
     await db.commit()
+    vigente = HandoffSettings(
+        sla_minutes=sla_minutos(await get_app_setting(SETTING_SLA_MINUTES, "0", db)),
+        out_of_hours_notice=aviso_fuera_de_horario_activo(
+            await get_app_setting(SETTING_AVISO_FUERA_DE_HORARIO, "", db)
+        ),
+    )
     await record_audit(
         db, user_id=user.id, action="settings.handoff_updated", entity="app_setting",
-        after=body.model_dump(),
+        after=vigente.model_dump(),
     )
     await db.commit()
-    return body
+    return vigente
 
 
 @router.get("/settings/calendar", response_model=CalendarSettingsOut)

@@ -124,6 +124,14 @@ async def _sanitize_bridge_message(text: str | None) -> str:
     lower = candidate.lower()
     if any(n in lower for n in await _forbidden_names()):
         return default
+    # El puente lo escribe el modelo y se envía sin pasar por el verificador de importes del
+    # orquestador: un puente de derivación no tiene por qué citar ningún precio, así que si
+    # lleva uno se descarta entero y se usa el texto por defecto.
+    from app.agents.output_verifier import extraer_importes
+
+    if extraer_importes(candidate):
+        logger.warning("handoff.bridge.importe_descartado")
+        return default
     return candidate or default
 
 

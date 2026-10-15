@@ -48,7 +48,8 @@ _SOLO_PUNTUACION = " \t\r\n«»\"'`.,;:!¡¿?*_-"
 
 
 def _recortar(texto: str | None, limite: int = _MAX_CHARS_TURNO) -> str:
-    return (texto or "").strip()[:limite]
+    # Los turnos de contexto también son texto del paciente: no pueden imitar el delimitador.
+    return (texto or "").strip()[:limite].replace("<<<", "«").replace(">>>", "»")
 
 
 def _delimitar(texto: str) -> str:

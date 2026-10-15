@@ -34,7 +34,7 @@ TEXTO_IMPORTE_NO_RESPALDADO_SIN_DERIVAR = (
 )
 
 # Un número a la española: «1.200», «1 200», «1.200,50», «49,90», «1200».
-_NUM = r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d{1,3}(?:[  ]\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?"
+_NUM = r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d{1,3}(?:[   ]\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?"
 _MONEDA_DETRAS = r"\s*(?:€|euros?\b|eur\b)"
 _IMPORTE_DETRAS = re.compile(rf"(?P<n>{_NUM}){_MONEDA_DETRAS}", re.IGNORECASE)
 # Delante solo «€» y «EUR»: con «euros» delante, «60 euros 30 minutos» leería un 30 como precio.
@@ -45,7 +45,7 @@ _RANGO = re.compile(
 )
 _CUALQUIER_NUMERO = re.compile(_NUM)
 _MILES_PUNTO = re.compile(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?")
-_MILES_ESPACIO = re.compile(r"\d{1,3}(?:[  ]\d{3})+(?:,\d+)?")
+_MILES_ESPACIO = re.compile(r"\d{1,3}(?:[   ]\d{3})+(?:,\d+)?")
 
 
 def _normalizar(token: str) -> Decimal | None:
@@ -53,7 +53,7 @@ def _normalizar(token: str) -> Decimal | None:
     if _MILES_PUNTO.fullmatch(token):
         token = token.replace(".", "").replace(",", ".")
     elif _MILES_ESPACIO.fullmatch(token):
-        token = token.replace(" ", "").replace(" ", "").replace(",", ".")
+        token = token.replace(" ", "").replace(" ", "").replace(" ", "").replace(",", ".")
     else:
         token = token.replace(",", ".")
     try:

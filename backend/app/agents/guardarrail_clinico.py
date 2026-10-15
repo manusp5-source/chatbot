@@ -258,6 +258,7 @@ _ANAFORAS = (
     # solos atrapaban «¿la misma hora que el martes?» y «¿me sigue valiendo el seguro?».
     "sigue igual", "me sigue doliendo", "me sigue molestando", "me sigue sangrando",
     "no se me pasa", "no se me quita", "ha empeorado", "empeora",
+    "sigue doliendo", "siguen doliendo", "me siguen doliendo", "no mejora",
     "ahi mismo", "la misma muela", "el mismo dolor", "la misma zona",
     "como te decia", "como te digo", "lo anterior",
 )
