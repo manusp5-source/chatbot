@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import text
 
+from app.agents.kb_sanitizer import advertencia, limpiar_instrucciones
 from app.agents.tools.registry import Tool, register_tool
 from app.core.logging import get_logger
 from app.db.session import db_session
@@ -119,18 +120,27 @@ async def consultar_kb(args: dict[str, Any], ctx: dict[str, Any]) -> str:
         rows = result.fetchall()
 
     results = []
+    bloques_descartados = 0
     for r in rows:
         meta = r.metadata or {}
         source = r.document_nombre or "documento desconocido"
         page = meta.get("page") or meta.get("pagina") or meta.get("row")
+        # Se quita el texto dirigido al asistente ANTES de que lo vea el modelo (T2B: una nota
+        # sutil dentro de la tabla de precios le hizo dar un precio plantado; el prompt no bastó).
+        contenido, quitados = limpiar_instrucciones(r.contenido)
+        bloques_descartados += quitados
         results.append(
             {
                 "id": str(r.id),
                 "document_id": str(r.document_id),
                 "fuente": f"{source} (pág. {page})" if page else source,
-                "contenido": r.contenido[:_MAX_CHUNK_LEN],
+                "contenido": contenido[:_MAX_CHUNK_LEN],
                 "similarity": float(r.similarity),
             }
+        )
+    if bloques_descartados:
+        logger.warning(
+            "kb_search.instruccion_descartada", bloques=bloques_descartados, query=query[:80]
         )
     elapsed_ms = int((time.perf_counter() - started) * 1000)
     logger.info("kb_search", query=query[:80], hits=len(results), vector=vector_ok)
@@ -147,6 +157,8 @@ async def consultar_kb(args: dict[str, Any], ctx: dict[str, Any]) -> str:
         ),
         "results": results,
     }
+    if bloques_descartados:
+        payload["_advertencia"] = advertencia(bloques_descartados)
     if not results:
         # Una lista vacía no es una orden: el modelo tiene que DEDUCIR que debe decir
         # «no lo tengo», y a veces deduce que puede rellenar el hueco con algo
