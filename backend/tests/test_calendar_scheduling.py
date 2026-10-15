@@ -224,7 +224,13 @@ async def test_sin_google_conectado_no_se_ofrecen_huecos(monkeypatch):
 
     monkeypatch.setattr(cal, "_calendar_connected", sin_calendario)
 
-    manana = (datetime.now(MADRID) + timedelta(days=30)).strftime("%Y-%m-%d")
+    # Un día laborable: con «hoy + 30 días» a secas el test dependía de qué día de la semana
+    # cayera y, en sábado o domingo, el negocio está cerrado y contesta eso antes de mirar si
+    # hay calendario conectado.
+    dia = datetime.now(MADRID) + timedelta(days=30)
+    while dia.isoweekday() > 5:
+        dia += timedelta(days=1)
+    manana = dia.strftime("%Y-%m-%d")
     out = json.loads(await cal.consultar_disponibilidad({"fecha": manana}, {}))
     assert "error" in out
     assert "no está conectado" in out["error"]

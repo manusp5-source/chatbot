@@ -47,7 +47,8 @@ def test_internal_package_does_not_import_writers():
         # importlib.util permite leer el source sin ejecutar imports.
         spec = importlib.util.find_spec(modname)
         assert spec is not None and spec.origin is not None, f"missing {modname}"
-        with open(spec.origin) as fp:
+        # utf-8 explícito: en Windows `open()` usa cp1252 y el código lleva tildes en los comentarios.
+        with open(spec.origin, encoding="utf-8") as fp:
             src = fp.read()
         for bad in forbidden:
             assert bad not in src, (
@@ -58,7 +59,7 @@ def test_internal_package_does_not_import_writers():
 def test_internal_tools_only_use_getters_of_agent_pause():
     """En tools.py solo permitimos getters de agent_pause."""
     spec = importlib.util.find_spec("app.agents.internal.tools")
-    with open(spec.origin) as fp:
+    with open(spec.origin, encoding="utf-8") as fp:
         src = fp.read()
     forbidden_calls = ["set_agent_paused", "set_channel_paused", "add_demo_conversation", "remove_demo_conversation"]
     for fn in forbidden_calls:

@@ -139,3 +139,11 @@ real con LLM; entrega real por WhatsApp/Instagram/web; web push real. El crític
 pasada 2.
 
 **Veredicto pasada 2**: avanzar, con esas salvedades. La regla 7 sigue sin demostrarse hasta ejecutar F2.
+
+### 2026-10-15 — Los dos fallos previos de la suite, arreglados
+
+Eran fallos de los propios tests, no del producto, y estaban fuera del diff de la review:
+- `test_internal_agent.py`: `open()` sin `encoding` leía con cp1252 en Windows y fallaba con `UnicodeDecodeError` ante las tildes de los comentarios. Ahora `encoding="utf-8"`.
+- `test_calendar_scheduling.py::test_sin_google_conectado_no_se_ofrecen_huecos`: pedía «hoy + 30 días», que depende del día de la semana (el 15 oct 2026 cae en sábado y el negocio cierra). Ahora avanza al primer día laborable.
+
+Ejecutados: `25 passed, 1 skipped`. La suite completa debería quedar sin fallos; no la he repetido entera tras este cambio.
