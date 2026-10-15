@@ -136,7 +136,7 @@ Reconstructed on 17 August 2026 from the codebase and CLAUDE.md. Dates are appro
 
 ## DEC-14 · Rules are the floor, the LLM may only add
 
-**Decision:** The clinical guardrail is a deterministic word list that runs before the model. An optional second layer (`GUARDARRAIL_CLINICO_LLM`, off by default) asks a cheap LLM whether a message that the rules let through still sounds clinical. That layer can only turn a "pass" into a "hand off": it never overrides a rule, it is consulted only when the rules did not fire, and if it fails the message proceeds as if it did not exist.
+**Decision:** The clinical guardrail is a deterministic word list that runs before the model. An optional second layer (`GUARDARRAIL_CLINICO_LLM`, off by default) asks a cheap LLM whether a message that the rules let through still sounds clinical. That layer can only turn a "pass" into a "hand off": it never overrides a rule, it is consulted only when the rules did not fire, and if it fails (an exception, or an empty answer such as a reasoning model running out of tokens) the message proceeds as if it did not exist. Any other answer than a clean "NO" hands off ("NO SÉ" included). The patient's message is passed whole, inside delimiters, as data.
 
 **Why:** A word list is auditable, free and works when the provider is down, but it misses paraphrase ("my mouth feels numb"). A classifier catches paraphrase but cannot be audited and drifts between model versions. Letting the LLM only add keeps the guarantee that matters (a rule hit is never lost) and buys recall where the list is blind. Cost asymmetry decides every tie: a false positive costs a human one minute; a false negative is the system opining on a patient's symptom.
 
@@ -146,11 +146,13 @@ Reconstructed on 17 August 2026 from the codebase and CLAUDE.md. Dates are appro
 
 ## DEC-15 · The answer is checked after the model, not only instructed before it
 
-**Decision:** Before a reply leaves `run_agent`, every euro amount in it must appear in the context the model had (system prompt, history, user message, tool results of this turn). Otherwise the reply is replaced by a fixed sentence and a `salida_importe_no_respaldado` decision is logged. `SECURITY_GUARD` rule 7 additionally forbids answering with the price of a similar product.
+**Decision:** Before a reply leaves `run_agent`, every euro amount in it must be backed by evidence the model was legitimately given. Otherwise the reply is replaced by a fixed sentence and a `salida_importe_no_respaldado` decision is logged. `SECURITY_GUARD` rule 7 separately forbids answering with the price of a similar product.
 
-**Why:** Eval F2 showed the agent answering a question about a zirconia implant with the price of the porcelain one, opening with "yes". The prompt already said "if it is not in the knowledge base, it does not exist"; a prompt is a request, this is a check. Fail-closed on money: a false positive costs a person confirming a price, a false negative is an invented price the customer trusts.
+**What counts as evidence:** the business's own prompt (without the date line), what the agent already said in earlier turns, the operator's instruction when correcting a draft, and the tool results of this turn. In the prompt, history and non-knowledge-base tools only a number written as an amount counts; in knowledge-base chunks a bare number also counts (spreadsheet rows read "Limpieza,60"). **Not evidence:** what the customer wrote ("they told me it is 300 €" must not confirm 300 €) and the text the model writes next to a tool call ("I think it is 350 €").
 
-**Limits, stated on purpose:** Euro amounts only (times and dates are computed from the calendar and would produce false positives). A derived amount (a sum, a discount) is not literally in the context and is treated as unsupported. The similarity threshold (0.3) was not changed: tuning it without a real knowledge base and recall evals would be guessing.
+**Why:** Eval F2 showed the agent answering a question about a zirconia implant with the price of the porcelain one. The prompt already said "if it is not in the knowledge base, it does not exist"; a prompt is a request, this is a check. Fail-closed on money: a false positive costs a person confirming a price, a false negative is an invented price the customer trusts.
+
+**What it does NOT catch, stated on purpose:** F2 itself. If the porcelain price is in the tool result and the model attaches it to the zirconia implant, the amount is "backed" and the reply goes out (`test_limite_conocido_el_precio_del_producto_vecino_pasa_si_esta_en_la_kb` pins this). Catching it needs understanding which product a sentence is about, not comparing numbers; the only barrier there is rule 7 plus the F2 eval run against a real LLM, which has not been run. Also uncovered: times and dates (computed from the calendar, they would produce false positives), currencies other than euros, "mil euros", and English-style "1,200 €". A derived amount (a sum, a discount) is treated as unsupported. A bare number in a long knowledge-base document can back an invented amount by coincidence. The similarity threshold (0.3) was not changed: tuning it without a real knowledge base and recall evals would be guessing.
 
 **Rejected:** Verifying every number (false positives on phone numbers, addresses, appointment times). An LLM judge for groundedness (same auditability problem as DEC-14, plus latency on every reply). Raising the threshold now (unmeasurable here).
 
@@ -158,7 +160,7 @@ Reconstructed on 17 August 2026 from the codebase and CLAUDE.md. Dates are appro
 
 ## DEC-16 · Escalation is a notice, not a reassignment
 
-**Decision:** A hand-off is a promise ("they will answer you as soon as they can"). After `handoff.sla_minutes` without a single operator message, one internal web push is sent per hand-off. Off by default. The bridge message can also say the business is closed (`handoff.out_of_hours_notice`, off by default).
+**Decision:** A hand-off is a promise ("they will answer you as soon as they can"). After `handoff.sla_minutes` without a single operator message, one internal web push is sent per hand-off. Off by default. The bridge message can also say the business is closed (`handoff.out_of_hours_notice`, off by default). Both are switched on by an admin with `PUT /api/v1/admin/settings/handoff` (`{"sla_minutes": 15, "out_of_hours_notice": true}`); there is no panel screen for it yet. The out-of-hours phrase relies on the calendar settings, and the existing parser drops overnight ranges such as `22:00-02:00`, so a night-time business would always read as closed: leave it off there.
 
 **Why:** Nothing used to check that the promise was kept. The smallest useful step is to tell the team. Who to reassign to, and what to tell the customer, are product decisions that depend on how each clinic staffs the inbox, so they are not made by a cron job.
 

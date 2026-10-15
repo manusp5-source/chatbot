@@ -18,9 +18,9 @@ Instagram DM, correo, chat web y voz.
 | | |
 |---|---|
 | Fase | Construido y en mantenimiento. No se planifica desde cero |
-| Rama | `feat/factoria-artefactos` |
-| Última tarea | Oleada 2 de FactorIA: reconstruir los artefactos del método a partir del código |
-| Pruebas | 130 ficheros en `backend/tests/` (a 14 oct 2026) |
+| Rama | `feat/gaps-entrevista` (trabajo de cierre de gaps; sin mergear) |
+| Última tarea | Cierre de gaps del 14-15 oct 2026 (ver `implementation/task_tracker.md`, sección «Trabajo de cierre de gaps») |
+| Pruebas | 134 ficheros en `backend/tests/` (a 15 oct 2026) |
 | CI | `.github/workflows/ci.yml` — pruebas, migraciones ida y vuelta, tipos y build del panel, tres imágenes Docker |
 | Migraciones | 55 revisiones, cabeza `0054_channel_secrets_encrypted` |
 

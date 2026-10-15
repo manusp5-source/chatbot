@@ -38,7 +38,7 @@ es precisamente la que el diseño prometía y el código no tiene.
 | IT-06 | Esqueleto frontend | `[x]` | `frontend/src/router.tsx`, `components/ProtectedRoute.tsx`, `components/Layout.tsx`. El admin aterriza en la Home; el operador, en el inbox |
 | IT-07 | Cliente HTTP centralizado | `[x]` | `frontend/src/services/api.ts` y nueve servicios por área |
 | IT-08 | Servicio cifrado credenciales | `[≠]` | Existe, pero repartido: `core/encryption.py`, `core/encrypted_type.py` (tipo `EncryptedText`), `services/credentials.py`, `services/channel_secrets.py`. No hay `credentials_service.py` |
-| IT-09 | Tests automáticos críticos | `[x]` | `backend/tests/` — **130 ficheros** `test_*.py` (a 14 oct 2026) |
+| IT-09 | Tests automáticos críticos | `[x]` | `backend/tests/` — **134 ficheros** `test_*.py` (a 15 oct 2026) |
 | IT-10 | Seed con datos demo | `[x]` | `app/scripts/seed.py`, lanzado por `backend/entrypoint.sh` al arrancar el contenedor |
 | IT-11 | Audit log automático | `[x]` | `services/audit.py`, tabla `audit_log`, panel en `pages/admin/AuditPage.tsx` |
 | IT-12 | EasyPanel + healthchecks | `[x]` | `DEPLOY_EASYPANEL.md`, `docker-compose.easypanel.yml`, `deployment/README.md`, `scripts/smoke.sh`, `api/health.py` |
@@ -134,18 +134,19 @@ valor de la aplicación hoy.
 ## Trabajo de cierre de gaps — 14 oct 2026 (rama `feat/gaps-entrevista`)
 
 Cada fila nace de un intent (`planning/intent-002.md` a `intent-004.md`) o de una decisión
-(`DECISIONS.md` DEC-14 a DEC-17). Columna `Review ✓`: **ninguna pasó todavía por `/review`**
-con revisor y crítico en subagentes distintos; hasta entonces no están `DONE`.
+(`DECISIONS.md` DEC-14 a DEC-17). Columna `Review ✓`: la pasada 1 de `/review` (revisor sonnet + crítico opus,
+subagentes distintos) dio **«arreglar primero»**; los hallazgos sostenidos están arreglados con su eval
+nuevo (ver `docs/work_log.md`, «## Review»). Hasta que la pasada 2 dé «avanzar» ninguna fila es `DONE`.
 
 | ID | Qué | Skill | Model | Eval ✓ | Review ✓ | Estado |
 |---|---|---|---|---|---|---|
-| G1 | Aviso de IA en el primer mensaje de texto (cierra L9-B) | ninguna | codex | `test_aviso_ia_primera_interaccion.py` + L9 sin `xfail`, ejecutados | pendiente | `REVIEW` |
-| G2a | Regla 7 de `SECURITY_GUARD` (anti-sustitución) | ninguna | codex | Prueba del prompt ensamblado, ejecutada. **F2 sigue sin ejecutarse con LLM real** | pendiente | `REVIEW` |
-| G2b | Verificador de importes en la salida + `consultar_kb` vacío explícito | ninguna | sonnet (por orden expresa de Manuel, no Codex) | `test_output_verifier.py`, ejecutado en rojo y en verde | pendiente | `REVIEW` |
-| G3 | Guardarraíl: cobertura, seguimiento sin pronombre y capa LLM opcional | ninguna | sonnet (por orden expresa de Manuel, no Codex) | `test_guardarrail_clinico_cobertura.py` y `_capa_llm.py`. Capa LLM probada solo con modelo simulado | pendiente | `REVIEW` |
-| G5 | KPIs de calidad (`GET /dashboard/quality`) | ninguna | sonnet | `test_quality_kpis.py` contra Postgres real | pendiente | `REVIEW` |
-| G6 | Escalado SLA y aviso de fuera de horario (ambos opt-in) | ninguna | sonnet | `test_handoff_sla.py` contra Postgres real | pendiente | `REVIEW` |
-| G7 | DPIA técnica (borrador) en `../legal/dpia-chatbot-borrador.md` | ninguna | sonnet | n/a (documento): rutas citadas comprobadas | pendiente | `REVIEW` |
+| G1 | Aviso de IA en el primer mensaje de texto (cierra L9-B) | ninguna | codex | `test_aviso_ia_primera_interaccion.py`, `test_aviso_ia_bd.py` (Postgres real; incluye el puente de derivación) + L9 sin `xfail` | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
+| G2a | Regla 7 de `SECURITY_GUARD` (anti-sustitución) | ninguna | codex | Prueba del prompt ensamblado, ejecutada. **F2 sigue sin ejecutarse con LLM real** | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
+| G2b | Verificador de importes en la salida + `consultar_kb` vacío explícito | ninguna | sonnet (por orden expresa de Manuel, no Codex) | `test_output_verifier.py`, en rojo y en verde (ampliado tras la review). **No atrapa F2 literal** (DEC-15) | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
+| G3 | Guardarraíl: cobertura, seguimiento sin pronombre y capa LLM opcional | ninguna | sonnet (por orden expresa de Manuel, no Codex) | `test_guardarrail_clinico_cobertura.py` y `_capa_llm.py`. Capa LLM probada solo con modelo simulado | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
+| G5 | KPIs de calidad (`GET /dashboard/quality`) | ninguna | sonnet | `test_quality_kpis.py` contra Postgres real | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
+| G6 | Escalado SLA y aviso de fuera de horario (ambos opt-in) | ninguna | sonnet | `test_handoff_sla.py` y `test_ajustes_derivacion.py` (GET/PUT `/admin/settings/handoff`) contra Postgres real | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
+| G7 | DPIA técnica (borrador) en `../legal/dpia-chatbot-borrador.md` | ninguna | sonnet | n/a (documento): rutas citadas comprobadas | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
 
 **Sin hacer, a propósito:** ejecutar F2/T2/F3 contra la app real (necesita claves de LLM y gasta
 dinero), router y agentes por dominio (DEC-17), streaming de voz, equipos y skills de handoff,
