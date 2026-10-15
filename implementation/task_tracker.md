@@ -136,16 +136,16 @@ valor de la aplicación hoy.
 Cada fila nace de un intent (`planning/intent-002.md` a `intent-004.md`) o de una decisión
 (`DECISIONS.md` DEC-14 a DEC-17). Columna `Review ✓`: la pasada 1 de `/review` (revisor sonnet + crítico opus,
 subagentes distintos) dio **«arreglar primero»**; los hallazgos sostenidos están arreglados con su eval
-nuevo (ver `docs/work_log.md`, «## Review»). Hasta que la pasada 2 dé «avanzar» ninguna fila es `DONE`.
+nuevo (ver `docs/work_log.md`, «## Review»). La pasada 2 (15 oct) dio «avanzar» con las salvedades del work_log; las filas siguen en `REVIEW` hasta que Manuel acepte y se mezcle la rama, y G2a no pasa a `DONE` sin ejecutar F2 con LLM real.
 
 | ID | Qué | Skill | Model | Eval ✓ | Review ✓ | Estado |
 |---|---|---|---|---|---|---|
-| G1 | Aviso de IA en el primer mensaje de texto (cierra L9-B) | ninguna | codex | `test_aviso_ia_primera_interaccion.py`, `test_aviso_ia_bd.py` (Postgres real; incluye el puente de derivación) + L9 sin `xfail` | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
-| G2a | Regla 7 de `SECURITY_GUARD` (anti-sustitución) | ninguna | codex | Prueba del prompt ensamblado, ejecutada. **F2 sigue sin ejecutarse con LLM real** | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
-| G2b | Verificador de importes en la salida + `consultar_kb` vacío explícito | ninguna | sonnet (por orden expresa de Manuel, no Codex) | `test_output_verifier.py`, en rojo y en verde (ampliado tras la review). **No atrapa F2 literal** (DEC-15) | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
-| G3 | Guardarraíl: cobertura, seguimiento sin pronombre y capa LLM opcional | ninguna | sonnet (por orden expresa de Manuel, no Codex) | `test_guardarrail_clinico_cobertura.py` y `_capa_llm.py`. Capa LLM probada solo con modelo simulado | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
-| G5 | KPIs de calidad (`GET /dashboard/quality`) | ninguna | sonnet | `test_quality_kpis.py` contra Postgres real | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
-| G6 | Escalado SLA y aviso de fuera de horario (ambos opt-in) | ninguna | sonnet | `test_handoff_sla.py` y `test_ajustes_derivacion.py` (GET/PUT `/admin/settings/handoff`) contra Postgres real | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
+| G1 | Aviso de IA en el primer mensaje de texto (cierra L9-B) | ninguna | codex | `test_aviso_ia_primera_interaccion.py`, `test_aviso_ia_bd.py` (Postgres real; incluye el puente de derivación) + L9 sin `xfail` | pasada 1 «arreglar primero» → arreglado; pasada 2 (15 oct) «avanzar» con salvedades | `REVIEW` |
+| G2a | Regla 7 de `SECURITY_GUARD` (anti-sustitución) | ninguna | codex | Prueba del prompt ensamblado, ejecutada. **F2 sigue sin ejecutarse con LLM real** | pasada 1 «arreglar primero» → arreglado; pasada 2 (15 oct) «avanzar» con salvedades | `REVIEW` |
+| G2b | Verificador de importes en la salida + `consultar_kb` vacío explícito | ninguna | sonnet (por orden expresa de Manuel, no Codex) | `test_output_verifier.py`, en rojo y en verde (ampliado tras la review). **No atrapa F2 literal** (DEC-15) | pasada 1 «arreglar primero» → arreglado; pasada 2 (15 oct) «avanzar» con salvedades | `REVIEW` |
+| G3 | Guardarraíl: cobertura, seguimiento sin pronombre y capa LLM opcional | ninguna | sonnet (por orden expresa de Manuel, no Codex) | `test_guardarrail_clinico_cobertura.py` y `_capa_llm.py`. Capa LLM probada solo con modelo simulado | pasada 1 «arreglar primero» → arreglado; pasada 2 (15 oct) «avanzar» con salvedades | `REVIEW` |
+| G5 | KPIs de calidad (`GET /dashboard/quality`) | ninguna | sonnet | `test_quality_kpis.py` contra Postgres real | pasada 1 «arreglar primero» → arreglado; pasada 2 (15 oct) «avanzar» con salvedades | `REVIEW` |
+| G6 | Escalado SLA y aviso de fuera de horario (ambos opt-in) | ninguna | sonnet | `test_handoff_sla.py` y `test_ajustes_derivacion.py` (GET/PUT `/admin/settings/handoff`) contra Postgres real | pasada 1 «arreglar primero» → arreglado; pasada 2 (15 oct) «avanzar» con salvedades | `REVIEW` |
 | G7 | DPIA técnica (borrador) en `../legal/dpia-chatbot-borrador.md` | ninguna | sonnet | n/a (documento): rutas citadas comprobadas | pasada 1 (14 oct): arreglar primero → arreglado; pasada 2 pendiente | `REVIEW` |
 
 **Sin hacer, a propósito:** ejecutar F2/T2/F3 contra la app real (necesita claves de LLM y gasta

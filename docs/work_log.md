@@ -105,3 +105,37 @@ verificador de importes (es de uso interno); la capa 2 con un LLM real; F2/T2/F3
 
 **Veredicto pasada 1**: arreglar primero. Los bloqueantes de arriba están arreglados; **falta la pasada 2**
 (volver a lanzar el revisor sobre lo arreglado) antes de marcar `Review ✓`.
+
+### Review — pasada 2 (15 oct 2026)
+
+Revisor (sonnet, contexto limpio) sobre los arreglos de la pasada 1, con casos hostiles propios y BD real.
+Arreglos 1-6 (verificador, capa LLM, anáforas, aviso de IA, endpoints, voz): **CORRECTO** con sus ataques.
+Hallazgos nuevos, todos MEDIO o BAJO, **arreglados con su prueba en rojo primero**:
+
+| Hallazgo | Arreglo |
+|---|---|
+| `mensaje_al_cliente` que el modelo escribe al llamar a `derivar_humano` esquivaba el verificador | Un puente que contenga un importe se descarta entero y se usa el texto por defecto |
+| `PUT /admin/settings/handoff` no era parcial: `{"sla_minutes": 45}` apagaba el otro ajuste | Campos opcionales; ausente = se conserva |
+| U+202F (espacio fino) como separador de miles | Reconocido |
+| El historial de contexto de la capa LLM podía imitar el delimitador | Saneado como el mensaje |
+| `sigue doliendo`, `me siguen doliendo`, `no mejora` ya no se reconocían tras estrechar las anáforas | Añadidos |
+
+**Aceptado y documentado, sin arreglar:** `evidencia_extra` respalda un importe citado en negativo por el
+equipo (lo teclea un usuario autenticado que luego revisa el borrador); falsos positivos residuales de
+`como te decía` / `lo anterior` / `ahí mismo` tras una derivación; el agente interno del operador sin
+verificador (DEC-15).
+
+**Suite completa** (Postgres y Redis reales, `pytest tests` desde `backend/`):
+`2 failed, 1396 passed, 1 skipped`. Los dos fallos son ajenos al diff y se conocían:
+- `test_internal_agent.py::test_internal_package_does_not_import_writers`: `UnicodeDecodeError` cp1252, falla igual en la base `f341a61`.
+- `test_calendar_scheduling.py::test_sin_google_conectado_no_se_ofrecen_huecos`: el test usa «hoy + 30 días»,
+  que el 15 oct 2026 cae en sábado (2026-11-14) y el negocio cierra; ni el test ni `calendar.py` están en el diff.
+
+Los «8 fallos de pandas» que citó el revisor eran de su entorno: el antivirus iba poniendo en cuarentena
+binarios (`.pyd`) del venv temporal (pandas, lxml); con el venv reinstalado pasan.
+
+**No ejecutado en ninguna pasada:** la capa LLM con un modelo real; F2, T2 y F3 contra la instalación
+real con LLM; entrega real por WhatsApp/Instagram/web; web push real. El crítico (opus) no se relanzó en la
+pasada 2.
+
+**Veredicto pasada 2**: avanzar, con esas salvedades. La regla 7 sigue sin demostrarse hasta ejecutar F2.
