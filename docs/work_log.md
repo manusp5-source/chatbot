@@ -147,3 +147,18 @@ Eran fallos de los propios tests, no del producto, y estaban fuera del diff de l
 - `test_calendar_scheduling.py::test_sin_google_conectado_no_se_ofrecen_huecos`: pedía «hoy + 30 días», que depende del día de la semana (el 15 oct 2026 cae en sábado y el negocio cierra). Ahora avanza al primer día laborable.
 
 Ejecutados: `25 passed, 1 skipped`. La suite completa debería quedar sin fallos; no la he repetido entera tras este cambio.
+
+### 2026-10-15 — Auditoría de la plantilla de prompt de texto
+
+Leída `PROMPT_PLANTILLA_TEXTO` (`backend/app/scripts/seed.py`). Hallazgo arreglado: la sección 4.2 ordenaba
+«nunca cuentes que estás guardando nada en un sistema», lo que choca con la transparencia del RGPD (art. 13/14);
+la plantilla de voz sí decía que se explicara para qué se piden los datos. Ahora: no anunciar cada guardado, pero
+responder con sinceridad si el cliente pregunta qué se hace con sus datos.
+
+**Pendiente de recompilar, no editado a mano:** `arnes/compilado/prompt-texto.md` y `prompt-voz.md` llevan la frase
+antigua. Los compilados no se editan a mano: hay que cambiar la fuente y recompilar con la Fábrica de Arneses.
+**Sin comprobar con LLM real:** el cambio es de prompt; ningún test determinista demuestra que el modelo lo cumpla.
+Solo afecta a instalaciones nuevas (el prompt vive en la base de datos y los agentes ya creados no cambian).
+
+Otros puntos vistos y NO tocados: al derivar, la plantilla dice «dile que un compañero le contesta», y además sale
+el mensaje puente escrito en código (posible duplicado); el fuera de horario depende solo del prompt.
