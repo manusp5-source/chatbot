@@ -178,6 +178,46 @@ Reconstructed on 17 August 2026 from the codebase and CLAUDE.md. Dates are appro
 
 ---
 
+## DEC-18 · Message content is not field-encrypted; protect it by minimisation instead
+
+**Decision:** `Message.contenido` stays readable by the database. The protection is: the agent never asks for health data and never writes it to the contact record (eval F7), retention limits per data type, cascade erasure of a contact, and disk or volume encryption at the host.
+
+**Why:** The panel searches and groups conversations by content, and the learning loop clusters corrections by similarity. A field-encrypted column cannot be searched or indexed, so encrypting it would remove features the operators use every day. Free text can still contain health data (art. 9), so this is a real residual risk, listed as R2 in `../legal/dpia-chatbot-borrador.md`; it is the controller's call and the product default can be revisited per customer.
+
+**Rejected:** Field encryption with a blind index (a lot of machinery for exact-match search only, no similarity or full-text). Encrypting and decrypting in the application for every list view (does not scale and loses ordering and filtering). Doing nothing and not documenting it.
+
+---
+
+## DEC-19 · No Langfuse inside the chatbot; traces stay in each installation
+
+**Decision:** Observability stays in the per-installation Postgres (agent traces, LLM usage, dashboard, `GET /dashboard/quality`). If Langfuse is added later it reuses the instance already planned in the deployment stack; it is not installed as a new service.
+
+**Why:** DEC-01 isolates each customer. A Langfuse shared across customers would put conversations from several clinics, with health data, in one store, which defeats that isolation. A per-customer Langfuse adds a service to every installation for a gain the existing traces mostly cover.
+
+**Rejected:** One shared Langfuse for all customers (breaks DEC-01). One Langfuse per customer now (cost and operations for no measured need).
+
+---
+
+## DEC-20 · CI should be the gate for deployment, but that is configured outside the repo
+
+**Decision:** The recommendation is yes: protect the default branch with the CI as a required check, and have EasyPanel deploy by webhook only when CI passes (`DEPLOY_EASYPANEL.md` §7). Status: **not applied**. It needs the owner's hands in GitHub and EasyPanel, and a mistake there can take production down, so it is not done from a script.
+
+**Why:** Today EasyPanel deploys the same push that CI runs on, so a red CI can already be on its way to production.
+
+**Rejected:** Leaving it as is (the 55-of-55 red CI history shows nobody was looking). Doing it from here (production change, no way to test it first).
+
+---
+
+## DEC-21 · The branch is not merged until F2 has run against a real LLM
+
+**Decision:** `feat/gaps-entrevista` is pushed but not merged. Before merging, run F2, T2 and F3 against the real installation and measure the optional second guardrail layer with a real model on a sample of real messages.
+
+**Why:** Everything the branch adds is proven with deterministic tests, but rule 7 and the second layer are behaviour of a model, and only a model can show it. The run costs cents and needs the local stack and an LLM key.
+
+**Rejected:** Merging now and running the evals later (a prompt rule would ship as if it were proven).
+
+---
+
 ## Open decisions
 
 | # | Question | Reference |
