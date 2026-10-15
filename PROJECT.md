@@ -20,7 +20,7 @@ Instagram DM, correo, chat web y voz.
 | Fase | Construido y en mantenimiento. No se planifica desde cero |
 | Rama | `feat/gaps-entrevista` (trabajo de cierre de gaps; sin mergear) |
 | Última tarea | Cierre de gaps del 14-15 oct 2026 (ver `implementation/task_tracker.md`, sección «Trabajo de cierre de gaps») |
-| Pruebas | 134 ficheros en `backend/tests/` (a 15 oct 2026) |
+| Pruebas | 136 ficheros en `backend/tests/` (a 15 oct 2026) |
 | CI | `.github/workflows/ci.yml` — pruebas, migraciones ida y vuelta, tipos y build del panel, tres imágenes Docker |
 | Migraciones | 55 revisiones, cabeza `0054_channel_secrets_encrypted` |
 
