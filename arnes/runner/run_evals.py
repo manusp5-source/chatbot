@@ -97,14 +97,22 @@ async def _enviar(cliente, visitor_id: str, token: str, texto: str) -> uuid.UUID
     return uuid.UUID(r.json()["conversation_id"])
 
 
-async def _esperar_respuesta(cliente, visitor_id, token, desde: int, timeout=120):
-    """Espera a que aparezca un mensaje del bot posterior a `desde`.
+async def _esperar_respuesta(
+    cliente, visitor_id, token, desde: int, timeout=120, pausa=2, estable=12
+):
+    """Espera a que el bot conteste y a que deje de llegar mensaje nuevo.
 
-    El agente de texto agrupa con `buffer_seconds`, asi que la respuesta tarda
-    unos segundos. Devuelve la lista de mensajes del bot nuevos.
+    El agente de texto agrupa con `buffer_seconds`, asi que la respuesta tarda unos segundos. Y
+    una respuesta puede salir en VARIAS burbujas: desde que el primer mensaje de una conversacion
+    lleva el aviso de IA aparte, la respuesta real llega 2-4 s despues. Volver con la primera
+    burbuja dejaba la evidencia cortada (el juez veia solo el aviso). Se devuelve cuando el numero
+    de burbujas lleva `estable` segundos sin cambiar.
     """
-    t0 = asyncio.get_event_loop().time()
-    while asyncio.get_event_loop().time() - t0 < timeout:
+    reloj = asyncio.get_event_loop().time
+    t0 = reloj()
+    ultimo_n, desde_cuando = None, 0.0
+    bot: list = []
+    while reloj() - t0 < timeout:
         r = await cliente.get(
             f"{BASE}/webchat/history", params={"visitor_id": visitor_id, "token": token}
         )
@@ -112,9 +120,12 @@ async def _esperar_respuesta(cliente, visitor_id, token, desde: int, timeout=120
         msgs = r.json().get("messages", [])
         bot = [m for m in msgs if m.get("role") == "bot"]
         if len(bot) > desde:
-            return bot[desde:]
-        await asyncio.sleep(2)
-    return []
+            if len(bot) != ultimo_n:
+                ultimo_n, desde_cuando = len(bot), reloj()
+            elif reloj() - desde_cuando >= estable:
+                return bot[desde:]
+        await asyncio.sleep(pausa)
+    return bot[desde:] if ultimo_n else []
 
 
 async def _traza(conv_id: uuid.UUID) -> list[dict]:
