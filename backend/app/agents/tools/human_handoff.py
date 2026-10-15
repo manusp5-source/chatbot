@@ -127,6 +127,24 @@ async def _sanitize_bridge_message(text: str | None) -> str:
     return candidate or default
 
 
+async def _con_aviso_de_ia(conv: Conversation, texto: str) -> str:
+    """Antepone el aviso de IA si este puente es lo primero que el cliente lee del agente.
+
+    Una conversación puede EMPEZAR derivando («quiero hablar con una persona»); sin esto el
+    cliente no sabría que lo que le contesta es un sistema automático, y como el puente cuenta
+    como respuesta previa, el aviso tampoco llegaría después. Best-effort: ante cualquier
+    fallo, el texto tal cual; nunca bloquea la derivación.
+    """
+    try:
+        from app.services.aviso_ia import aviso_ia_para_envio
+
+        async with db_session() as db:
+            return await aviso_ia_para_envio(db, conv, texto)
+    except Exception as e:  # noqa: BLE001 — nunca bloquea la derivación
+        logger.warning("handoff.bridge.aviso_ia_error", error=str(e))
+        return texto
+
+
 async def _aviso_fuera_de_horario() -> str:
     """Frase extra para el mensaje puente cuando se deriva con el negocio cerrado.
 
@@ -247,6 +265,7 @@ async def _send_handoff_bridge_message(
 
     text = await _sanitize_bridge_message(mensaje_custom)
     text += await _aviso_fuera_de_horario()
+    text = await _con_aviso_de_ia(conv, text)
     try:
         ext_id = await send_text_to_conversation(conv, text)
     except (MessagingWindowClosed, SendNotConfirmed) as e:
