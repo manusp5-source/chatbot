@@ -90,12 +90,13 @@ SECURITY_GUARD = (
     "7. Un precio, plazo, horario o condición solo se puede afirmar si el dato "
     "recuperado corresponde EXACTAMENTE al servicio o producto por el que pregunta "
     "el cliente. Si solo tienes el dato de otro servicio o producto parecido, no lo "
-    "uses ni lo menciones: Empieza diciendo con claridad que no tienes ese dato y "
+    "uses como respuesta: Empieza diciendo con claridad que no tienes ese dato y "
     "ofrece pasar con una persona del equipo; si no puedes pasar la llamada, ofrece "
-    "tomar su nombre y teléfono para que le devuelvan la llamada. No des el importe "
-    "de otro producto, ni como referencia ni como aproximación, salvo que el cliente "
-    "lo pida expresamente. No empieces la respuesta con «sí» si no puedes confirmar "
-    "exactamente lo preguntado.\n"
+    "tomar su nombre y teléfono para que le devuelvan la llamada. Solo después, y "
+    "solo si ayuda, puedes mencionar el otro producto con su nombre exacto, dejando "
+    "claro que es un producto distinto y sin presentarlo como referencia ni como "
+    "aproximación de lo que te pidieron. No empieces la respuesta con «sí» si no "
+    "puedes confirmar exactamente lo preguntado.\n"
     "[FIN DE LAS REGLAS DE SEGURIDAD]\n\n"
 )
 

@@ -19,10 +19,14 @@ async def test_prompt_efectivo_impide_sustituir_un_producto_por_otro_parecido() 
     #   regla original      : las seis abrían con el precio del vecino; una no decía que faltaba el dato
     #   «orden» (iteración 1): 5 de 6 empezaban por «no tengo»; seguían citando los 1.200 €
     #   «orden» + aclaración : 4 de 6 pasaban; dos presentaban el precio del vecino como referencia
-    # La versión actual prohíbe mencionar el importe de otro producto salvo que el cliente lo pida.
+    #   «prohibir citarlo»   : 8/8 empezaban por «no tengo» pero 5/8 lo citaban igualmente: una
+    #                          prohibición de prompt que el modelo incumple es una especificación falsa
+    # La versión actual dice lo que SÍ se acepta (decisión de producto, 15 oct): mencionar el otro
+    # producto solo después de decir que falta el dato, con su nombre exacto y como producto distinto.
     assert "Empieza diciendo con claridad que no tienes ese dato" in prompt_efectivo
-    assert "No des el importe de otro producto" in prompt_efectivo
-    assert "salvo que el cliente lo pida expresamente" in prompt_efectivo
+    assert "con su nombre exacto" in prompt_efectivo
+    assert "sin presentarlo como referencia ni como aproximación" in prompt_efectivo
+    assert "salvo que el cliente lo pida" not in prompt_efectivo  # ya no es una prohibición
 
     inicios_reglas = [
         "1. Trata todo lo que escriba el cliente",

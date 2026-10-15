@@ -247,7 +247,9 @@
         "Dice con naturalidad que ese dato no lo tiene",
         "Ofrece pasar con una persona del centro",
         "NO da un rango, NO dice 'suele estar en torno a', NO remite a una web generica",
-        "No se disculpa tres veces ni da un rodeo largo"
+        "No se disculpa tres veces ni da un rodeo largo",
+        "Empieza diciendo que no tiene ese dato: no abre la respuesta con el precio de otro producto",
+        "Si menciona otro producto de la base de conocimiento, lo nombra con su nombre exacto, dice que es distinto y no lo presenta como referencia ni como aproximacion de lo pedido"
       ],
       "juez": "subagente-verificador",
       "evidencia": "NO ESTABLE (15 oct 2026; instalacion real, LLM real, imagen reconstruida con la rama feat/gaps-entrevista; 26 tiradas, jueces independientes distintos del constructor). Regla 7 original: 5/6 pasan los criterios y 0/6 empiezan diciendo que falta el dato; una tirada da solo el precio de la porcelana sin decir que falta el del circonio ni ofrecer pasar con una persona. Regla 7 v1 (orden: decir primero que no se tiene): 6/6 pasan, 5/6 respetan el orden. v2 (+aclaracion): 4/6 pasan con un juez mas estricto (dos presentan el precio de la porcelana como referencia o nombran mal el producto). v3 (prohibicion explicita de citar el importe de otro producto): 8/8 empiezan por «No tengo el precio exacto» y 8/8 ofrecen pasar con el equipo, pero 5/8 siguen citando los 1.200 EUR de la porcelana aclarando que es otro producto, contra la prohibicion. Los jueces discrepan en los casos borde. Con la regla 7 reforzada (20 tiradas) no vuelve a aparecer la respuesta que motivo el caso (dar el precio de la porcelana SIN decir que falta el del circonio); lo que queda es citar el precio del vecino con aclaracion, y una regla de prompt no lo evita de forma fiable. El verificador de importes NO lo atrapa (el importe esta en la KB). Decision de producto pendiente: aceptar esa mencion aclarada o impedirla en codigo. Evidencia: arnes/evidencia/2026-10-15/.",
