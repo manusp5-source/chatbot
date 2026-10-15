@@ -62,3 +62,46 @@ ocupa `unicornia-crm-redis`.
 
 **Pendiente**
 - `/review` con subagente de contexto limpio
+
+## 2026-10-14 — Cierre de gaps (rama `feat/gaps-entrevista`)
+
+### Review — pasada 1
+
+Revisor (sonnet, contexto limpio) y crítico (opus, otro subagente), ambos sobre `git diff f341a61..HEAD`.
+Hallazgo de partida: `validate-tracker.py` da «FALLA: no hay filas con ID tipo M0-IT-001»; el crítico
+comprobó que falla igual sobre `f341a61` (tracker anterior a la convención), así que es previo al diff y
+no se ha tocado para que la review salga limpia.
+
+**SOSTENIDO por el crítico y arreglado, cada uno con su eval nuevo en rojo primero**
+
+| Hallazgo | Arreglo | Prueba |
+|---|---|---|
+| El día del mes (1-31) y cualquier número del prompt respaldaban un precio inventado | Evidencia estricta por tipo: en prompt/historial/tools solo un importe escrito como importe; número suelto solo en fragmentos de la KB | `test_la_fecha_el_horario_y_los_telefonos_no_respaldan_un_precio` |
+| Lo que escribe el cliente respaldaba un importe por eco | El mensaje del cliente ya no es evidencia | `test_lo_que_dice_el_cliente_no_respalda_un_importe` |
+| El texto intermedio del propio modelo respaldaba su respuesta | Solo cuentan los resultados de las tools de este turno | `test_el_propio_texto_intermedio_del_modelo_no_respalda_su_respuesta` |
+| «Corregir borrador»: el importe que dicta el equipo habría quedado bloqueado | `run_agent(evidencia_extra=...)` | `test_el_equipo_puede_dictar_un_importe_al_corregir_un_borrador` |
+| Rangos, «1 200 €» y «EUR 50» no se extraían | Nuevos patrones | `test_formatos_que_se_escapaban_ahora_se_extraen` |
+| Capa 2: contenido vacío derivaba TODO; «NO SÉ» pasaba; mensaje cortado a 300 caracteres; sin delimitadores | Vacío = fail-open; solo «NO» limpio pasa; mensaje entero (1500) y delimitado | `test_guardarrail_clinico_capa_llm.py` |
+| Anáforas `ahí`, `la misma`, `me sigue` atrapaban peticiones normales | Frases que hablan del síntoma | `test_m7_*` y `test_m8_*` |
+| El puente de `derivar_humano` no llevaba aviso de IA y desactivaba el aviso posterior | Módulo `services/aviso_ia.py`; el puente lo lleva | `test_aviso_ia_bd.py` (Postgres real) |
+| Una sugerencia de Entrenamiento enviada contaba como respuesta previa | Se excluye `extra.training` | `test_aviso_ia_bd.py` |
+| `handoff.sla_minutes` y `out_of_hours_notice` sin punto de escritura | `GET/PUT /admin/settings/handoff` con auditoría | `test_ajustes_derivacion.py` |
+| Autorización de `/dashboard/quality` solo probada con un script desechable | Test en el repo: 401 / 403 / 200 | `test_ajustes_derivacion.py` |
+| En voz, un agente legacy con `derivar_humano` ofrecía un traspaso imposible | El canal manda sobre la lista de tools | `test_en_voz_un_agente_con_todas_las_tools_...` |
+
+**SOSTENIDO y NO arreglable con código** (se documenta, no se esconde)
+- **El verificador de importes no atrapa el F2 literal.** Si el precio del producto vecino está en el
+  resultado de la tool, pasa. Una prueba lo fija y DEC-15 y SECURITY.md lo dicen. La regla 7 sigue sin
+  demostrarse hasta ejecutar F2 con un LLM real.
+- Falsos positivos de términos cortos nuevos (`emergency`, `pain`, `algo raro`…): aceptados por la
+  asimetría de costes y escritos en la cabecera de `guardarrail_clinico.py`.
+
+**INFUNDADO** (el crítico lo desmontó): el fallo de `test_contactos_csv_fusion_telefono` era contaminación
+de la BD por los scripts del propio revisor; en BD limpia pasa (17 passed). «Suite completa 261 passed»
+no era la suite completa (se paró con `-x`); contra BD limpia, 1320 passed.
+
+**Fuera de alcance de esta pasada:** el agente interno del operador tiene su propio bucle sin
+verificador de importes (es de uso interno); la capa 2 con un LLM real; F2/T2/F3 contra la instalación real.
+
+**Veredicto pasada 1**: arreglar primero. Los bloqueantes de arriba están arreglados; **falta la pasada 2**
+(volver a lanzar el revisor sobre lo arreglado) antes de marcar `Review ✓`.
