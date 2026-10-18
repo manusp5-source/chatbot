@@ -13,14 +13,14 @@ Instagram DM, correo, chat web y voz.
 
 **Es el producto que se vende.** Un cliente por instalación.
 
-## Estado — 17 de agosto de 2026
+## Estado — 19 de octubre de 2026
 
 | | |
 |---|---|
 | Fase | Construido y en mantenimiento. No se planifica desde cero |
 | Rama | `feat/gaps-entrevista` (trabajo de cierre de gaps; sin mergear) |
 | Última tarea | Cierre de gaps del 14-15 oct 2026 (ver `implementation/task_tracker.md`, sección «Trabajo de cierre de gaps») |
-| Pruebas | 136 ficheros en `backend/tests/` (a 15 oct 2026) |
+| Pruebas | 1416 pasan, 0 fallan, 1 saltada (suite completa, 15 oct 2026, Postgres y Redis reales) |
 | CI | `.github/workflows/ci.yml` — pruebas, migraciones ida y vuelta, tipos y build del panel, tres imágenes Docker |
 | Migraciones | 55 revisiones, cabeza `0054_channel_secrets_encrypted` |
 
@@ -34,9 +34,11 @@ Instagram DM, correo, chat web y voz.
 
 ## Siguiente
 
-1. Cerrar la Oleada 2: verificación con `/review` sobre este proyecto.
-2. Oleada 0 del paraguas: remoto privado y copia fuera de la máquina.
-3. Oleada 5: arnés del agente con la skill `entrenando-agentes`.
+1. `/review` de G8 (`kb_sanitizer` + regla 8): no pasó por las dos pasadas.
+2. Manuel acepta y se mezcla `feat/gaps-entrevista`; G1–G8 pasan de `REVIEW` a `DONE`.
+3. Decisión de producto de F2 (citar o no el precio de un servicio vecino ya aclarado) y calendario con huecos para F3.
+4. Tests propios del servidor MCP.
+5. Protección de rama y despliegue por webhook (decisión de Manuel).
 
 **No toca a este proyecto** la absorción de la Calculadora (Oleada 3, es del CRM)
 ni la retirada de `UnicornIA-CRM` (Oleada 4).

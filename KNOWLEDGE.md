@@ -112,3 +112,25 @@ plan del paraguas). Hallazgos al hacerlo:
   ningún documento de planificación**: clasificador, difusiones, agente interno,
   autoaprendizaje, voz, Instagram, Gmail, copias, tope de gasto, traza, RGPD,
   MCP y push. Está inventariado al final del tracker.
+
+---
+
+## Sesión del 14-19 de octubre de 2026 (cierre de gaps)
+
+Decisiones y hallazgos no obvios; el detalle está en `DECISIONS.md` (DEC-14 a 22)
+y `docs/work_log.md`.
+
+- **Un verificador que acepta cualquier número como evidencia no verifica nada.**
+  El de importes exige que el importe salga de un resultado de herramienta del
+  mismo turno. Solo cubre euros.
+- **Una regla de prompt no frenó la inyección sutil en la KB (T2B, 0/4).** Lo
+  resolvió un filtro determinista (`kb_sanitizer`, DEC-22): 4/4 pasan, con juez
+  ciego. Moraleja: lo que se puede comprobar en código no se deja al prompt.
+- **F2 (producto vecino) no es estable con ninguna de las cinco redacciones de la
+  regla 7.** Es una decisión de producto, no de prompt.
+- **La capa LLM del guardarraíl solo añade derivaciones y falla abierta.** 36/36
+  paráfrasis, 1/36 falso positivo, 9/9 inyecciones resistidas; muestra pequeña.
+- **El sandbox de Codex no ejecuta tests.** Verificar siempre con Postgres y Redis
+  reales en contenedores temporales.
+- **El hook `checkpoint.ps1` manda a stash el trabajo sin commitear.** Commitear
+  pronto.
