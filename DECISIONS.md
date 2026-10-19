@@ -238,6 +238,11 @@ Reconstructed on 17 August 2026 from the codebase and CLAUDE.md. Dates are appro
 
 **Rejected:** A stronger prompt rule (measured, did not work). An LLM judge over every chunk (an unauditable decision in front of every retrieval, and it would be the thing being attacked). Rejecting the whole chunk (it would also drop the real price in the same chunk).
 
+**Amendment, 19 Oct 2026 (after `/review`: reviewer + critic, both ran the code):**
+- *Where it applies.* Also at indexing time, over the whole document before it is chunked (`kb_indexer._chunk_text`). The 100-character overlap between chunks split the note in two and the planted price reached the model without the phrase that gives it away; the retrieval filter only ever sees one chunk. The retrieval filter stays for documents indexed before this change, which keep the hole until re-indexed.
+- *Phrasings.* Narrowed so it no longer deletes legitimate clinic text ("dental/social assistant", "priority instructions after surgery", "ignore the old website's indications") and widened to what slipped through: vocative ("Assistant: …"), `system:` / `[INST]`, English and Catalan, "ignore everything above", a phrase split over two lines, zero-width characters, full-width forms and Cyrillic look-alikes.
+- *What is still not covered, and now written down.* The internal operator agent (`agents/internal/tools.py` `kb_search`, `kb_read_document`) and the agents API read the KB unfiltered, and its guard has 4 rules, not 8. This is deliberate for now: the reader is the admin, not the patient, its only write is `propose_kb_update` (applied by a button), and the proposal replaces the whole document, so filtering the read would silently delete real lines on apply. In PDFs a note sitting above a price table takes the table lines up to the next blank line with it; in CSV/XLSX one row is one chunk, so a note in a cell takes the row, price included (the "reject the whole chunk" objection above applies to those formats). The log records the count, not the removed text, so there is no forensic trail of what was stripped.
+
 ---
 
 ## Open decisions

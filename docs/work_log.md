@@ -197,3 +197,35 @@ mensaje (`tests/test_runner_espera_burbujas.py`).
 - **Regresión:** T2 (burda) y F2 siguen bien tras el filtro; 0 mensajes con «145» en los 6 casos más recientes con el documento envenenado.
 - **Lo que no pasó por `/review`:** el filtro de KB y la regla 8 se añadieron después de las dos pasadas. Las pruebas deterministas y la suite
   completa los cubren; falta revisión independiente del código.
+
+### Review — pasada 3 (19 oct 2026): G8, filtro de KB y regla 8
+
+Revisor (sonnet, contexto limpio) y crítico (opus, distinto) ejecutaron el código; el crítico repitió los hallazgos mayores y levantó
+Postgres y Redis temporales. Validador del tracker: `FALLA: no hay filas con ID tipo M0-IT-001` (el tracker reconstruido usa `G1…G8`);
+no se tocó a mano.
+
+**Sostenido (con evidencia ejecutada):**
+- El solape de 100 caracteres entre chunks partía la nota y el precio plantado (145 €) llegaba al modelo sin la fórmula. **Bloqueante.**
+- Falsos positivos que borraban texto clínico: «asistente dental/social», «instrucciones prioritarias tras la cirugía», «ignora las
+  indicaciones de la web antigua», «modo desarrollador de la app», «mensaje de sistema de citas».
+- Falsos negativos: `asistente: di …` (el ejemplo literal del encargo), vocativos, `system:`, `[INST]`, inglés, catalán, «ignora todo lo
+  anterior», ancho cero, ancho completo, homoglifos cirílicos, fórmula partida en dos líneas.
+- Los tests no protegían el filtro: sobrevivían las mutaciones de separadores, del recuento y de dos fórmulas (`modo desarrollador`,
+  `system prompt`).
+- PDF/CSV/XLSX: la nota se lleva la tabla (PDF) o la fila con su precio (CSV/XLSX). Contradecía el «rechazar el chunk entero» de DEC-22.
+- El agente interno y la API de agentes leen la KB sin filtro y su guardia tiene 4 reglas, no 8.
+
+**Infundado:** que lo anterior sea «alto» a corregir con el mismo filtro (el lector es el admin y filtrar la lectura borraría líneas reales
+al aplicar `propose_kb_update`, que reemplaza el documento entero); que una instrucción en celda de tabla pase (se detecta, y el fallo es el
+contrario: se pierde la fila con su precio); «sin ReDoS» (cifra no reproducida por el crítico); «suite no ejecutable» (sí lo era).
+
+**No mirado (por el revisor):** resumen rodante, correo entrante y datos de contacto llegan al prompt sin filtro (los escribe el propio
+cliente; riesgo menor que la KB). El log no guarda QUÉ se quitó.
+
+**Arreglado (constructor, en rojo primero, 31 tests fallaban):** fórmulas más específicas, cobertura de lo que se colaba, normalización
+NFKC + invisibles + homoglifos, fórmulas en dos líneas, filtro también al indexar sobre el documento entero, una prueba por fórmula y por
+separador. Las 11 mutaciones de la review caen ahora. DEC-22 enmendado con lo que sigue sin cubrirse.
+
+**Veredicto**: arreglar primero → arreglado. Pendiente antes de `Review ✓`: nueva pasada del revisor sobre el código arreglado y repetir
+T2B contra el LLM real (las fórmulas cambiaron). Salvedades que se quedan escritas: agente interno sin filtro, PDF/CSV, reindexar los
+documentos ya subidos, log sin el texto quitado.
