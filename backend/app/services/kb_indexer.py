@@ -43,6 +43,7 @@ import pypdf
 from docx import Document as DocxDocument
 from sqlalchemy import select
 
+from app.agents.kb_sanitizer import limpiar_instrucciones
 from app.core.logging import get_logger
 from app.db.session import db_session
 from app.models.chunk import Chunk
@@ -345,6 +346,11 @@ def _chunk_text(text: str, source: str, page: int | None = None) -> list[dict]:
     Cada chunk que no es el primero se prefija con el título del documento, para
     que su embedding sepa de qué habla. Ver `_titulo_del_documento`.
     """
+    # Se quita el texto dirigido al asistente sobre el documento ENTERO, antes de trocearlo: el solape entre
+    # chunks parte la frase de la nota y el filtro de recuperación, que mira cada chunk suelto, no la veía.
+    text, quitados = limpiar_instrucciones(text.strip())
+    if quitados:
+        logger.warning("kb.index.instruccion_descartada", source=source, bloques=quitados)
     text = text.strip()
     if not text:
         return []
